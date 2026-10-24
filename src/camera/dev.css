@@ -1,0 +1,18 @@
+body {
+  font-family: system-ui, sans-serif;
+  margin: 24px;
+}
+
+#camera-video {
+  width: 640px;
+  max-width: 100%;
+  background: #222;
+  border-radius: 8px;
+  /* mirror it so it feels like looking in a mirror */
+  transform: scaleX(-1);
+}
+
+#status,
+#nose {
+  color: #555;
+}
