@@ -1,0 +1,35 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Fake posture panel – dev</title>
+    <style>
+      body { font: 14px system-ui, sans-serif; margin: 24px; }
+      #summary { font-size: 18px; margin: 16px 0 8px; }
+      #out { background: #f4f4f4; padding: 12px; border-radius: 8px; max-height: 60vh; overflow: auto; }
+    </style>
+  </head>
+  <body>
+    <div id="panel"></div>
+    <div id="summary"></div>
+    <pre id="out"></pre>
+
+    <script type="module">
+      import { mountFakePosturePanel } from './fake-posture.js';
+
+      const summary = document.querySelector('#summary');
+      const out = document.querySelector('#out');
+      let count = 0;
+      let perSecond = 0;
+      setInterval(() => ((perSecond = count), (count = 0)), 1000);
+
+      mountFakePosturePanel(document.querySelector('#panel'), (state) => {
+        count++;
+        const names = state.issues.map((i) => `${i.id}${i.sustained ? ' (sustained)' : ''}`);
+        summary.textContent =
+          `Score: ${state.score ?? '–'}  |  Issues: ${names.join(', ') || 'none'}  |  ${perSecond} states/sec`;
+        out.textContent = JSON.stringify(state, null, 2);
+      });
+    </script>
+  </body>
+</html>
