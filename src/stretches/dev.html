@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Stretches Playground</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 760px; margin: 24px auto; padding: 0 16px; color: #222; background: #fafafa; }
+    .card { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 12px 16px; margin: 8px 0; }
+    .card h3 { margin: 0 0 4px; font-size: 16px; }
+    .muted { color: #666; font-size: 14px; }
+    button { font: inherit; padding: 6px 12px; border-radius: 6px; border: 1px solid #bbb; background: #fff; cursor: pointer; }
+    #now { position: sticky; top: 0; background: #fde68a; border-color: #d97706; }
+    #log { font: 13px ui-monospace, monospace; max-height: 200px; overflow-y: auto; }
+  </style>
+</head>
+<body>
+  <h1>Stretches Playground</h1>
+  <p class="muted">Test src/stretches/index.js on its own. Start a stretch and watch the events.</p>
+
+  <div class="card" id="now">
+    <b id="nowText">No stretch running</b>
+    <span class="muted" id="nowTime"></span>
+    <button id="stop">Stop</button>
+  </div>
+
+  <label class="muted">Show stretches for:
+    <select id="filter"><option value="">All issues</option></select>
+  </label>
+  <div id="list"></div>
+
+  <h2>Events</h2>
+  <div class="card" id="log"></div>
+
+  <script type="module">
+    import { STRETCHES, stretchesFor, startStretch, stopStretch, onStretchEvent } from "./index.js";
+    import { ISSUES, ISSUE_IDS } from "../shared/contracts.js";
+
+    const $ = (id) => document.getElementById(id);
+
+    // Filter dropdown, one option per issue
+    for (const id of ISSUE_IDS) $("filter").append(new Option(ISSUES[id].layman, id));
+    $("filter").onchange = render;
+
+    // One card per stretch
+    function render() {
+      const list = $("filter").value ? stretchesFor($("filter").value) : STRETCHES;
+      $("list").replaceChildren(
+        ...list.map((s) => {
+          const card = document.createElement("div");
+          card.className = "card";
+          const total = s.steps.reduce((t, step) => t + step.seconds, 0);
+          card.innerHTML = `<h3></h3><p class="muted"></p><p class="muted"></p>`;
+          card.querySelector("h3").textContent = `${s.name} · ${total}s`;
+          card.querySelectorAll("p")[0].textContent = s.how;
+          card.querySelectorAll("p")[1].textContent = `Helps: ${s.helps.map((h) => ISSUES[h].layman).join(", ") || "general neck tension"}`;
+          const btn = document.createElement("button");
+          btn.textContent = "Start";
+          btn.onclick = () => startStretch(s.id);
+          card.append(btn);
+          return card;
+        }),
+      );
+    }
+    render();
+
+    // Show the running stretch and log every event
+    onStretchEvent((e) => {
+      const s = STRETCHES.find((x) => x.id === e.stretchId);
+      if (e.type === "end") {
+        $("nowText").textContent = `Finished: ${s.name}`;
+        $("nowTime").textContent = "";
+      } else {
+        $("nowText").textContent = `${s.name}, step ${e.stepIndex + 1}/${s.steps.length}: ${s.steps[e.stepIndex].text}`;
+        $("nowTime").textContent = ` (${e.secondsLeft}s left)`;
+      }
+      if (e.type !== "tick") {
+        $("log").insertAdjacentText("beforeend", `${JSON.stringify(e)}\n`);
+        $("log").append(document.createElement("br"));
+      }
+    });
+    $("stop").onclick = stopStretch;
+  </script>
+</body>
+</html>
