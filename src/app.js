@@ -36,3 +36,13 @@ function cameraErrorMessage(err) {
 }
 
 showCamera();
+
+// Dev only: the fake posture panel drives the tray score until real modules are wired (Job 6).
+if (import.meta.env.DEV && window.api) {
+  import('./debug/fake-posture.js').then(({ mountFakePosturePanel }) => {
+    mountFakePosturePanel(document.querySelector('#debug-panel'), (state) => {
+      window.api.setTrayScore(state.score);
+    });
+  });
+  window.api.onTrayCommand((command) => console.log('Tray command:', command));
+}
