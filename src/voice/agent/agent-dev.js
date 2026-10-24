@@ -79,7 +79,7 @@ function coachRules(state) {
     lastWarnedAt[worst.id] = now;
     warnedIssue = worst.id;
     tellMaizy(
-      `[app] Sustained posture issue: ${worst.medical ?? worst.layman} (plain words: ${worst.layman.toLowerCase()}). ` +
+      `[app] Sustained posture issue: ${worst.layman.toLowerCase()}. ` +
         `Severity ${Math.round(worst.severity * 10)} out of 10, going on for ${worst.durationSec} seconds. Score is ${state.score}.`,
     );
     return;
@@ -146,7 +146,7 @@ const clientTools = {
     return JSON.stringify({
       calibrated: s.calibrated,
       score: s.score,
-      issues: s.issues.map((i) => ({ id: i.id, medical: i.medical, plain: i.layman, severity: i.severity, seconds: i.durationSec })),
+      issues: s.issues.map((i) => ({ id: i.id, plain: i.layman, severity: i.severity, seconds: i.durationSec })),
     });
   },
 

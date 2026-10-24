@@ -16,7 +16,7 @@ const TIMELINE = [
   {
     when: "0:05",
     what: "slouching becomes sustained, first nudge",
-    text: "Heads up… postural kyphosis. In plain words, you're hunching over a little. Roll your shoulders back, and sit up tall.",
+    text: "Heads up… you're hunching over a little. Roll your shoulders back, and sit up tall.",
   },
   {
     when: "3:05",
