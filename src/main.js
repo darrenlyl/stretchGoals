@@ -1,15 +1,35 @@
-import { app, BrowserWindow, systemPreferences } from 'electron';
+// Main process: window, camera permission, and window.api handlers.
+import {
+  app,
+  BrowserWindow,
+  ipcMain,
+  Notification,
+  systemPreferences,
+} from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
 
-// Handle creating/removing shortcuts on Windows when installing/uninstalling.
+// Windows installer shortcut handling.
 if (started) {
   app.quit();
 }
 
+// Load secrets from .env. Only the main process can see them.
+try {
+  process.loadEnvFile();
+} catch {
+  console.warn('No .env file found. Voice (tts) will not work until you add one.');
+}
+
+// Windows needs an app ID for notifications to show.
+if (process.platform === 'win32') {
+  app.setAppUserModelId('com.stretchgoals.app');
+}
+
+let mainWindow;
+
 const createWindow = () => {
-  // Create the browser window.
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 800,
     height: 600,
     webPreferences: {
@@ -17,7 +37,6 @@ const createWindow = () => {
     },
   });
 
-  // and load the index.html of the app.
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
   } else {
@@ -26,16 +45,11 @@ const createWindow = () => {
     );
   }
 
-  // Open the DevTools.
   mainWindow.webContents.openDevTools();
 };
 
-// This method will be called when Electron has finished
-// initialization and is ready to create browser windows.
-// Some APIs can only be used after this event occurs.
 app.whenReady().then(async () => {
-  // Mac only: ask for camera permission before the window tries to use it.
-  // Windows has no prompt; camera access is controlled in Windows Settings.
+  // Mac asks for camera permission. Windows uses its Settings instead.
   if (process.platform === 'darwin') {
     const allowed = await systemPreferences.askForMediaAccess('camera');
     console.log('Camera access:', allowed ? 'allowed' : 'denied');
@@ -43,8 +57,7 @@ app.whenReady().then(async () => {
 
   createWindow();
 
-  // On OS X it's common to re-create a window in the app when the
-  // dock icon is clicked and there are no other windows open.
+  // Mac: reopen the window when the dock icon is clicked.
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
@@ -52,14 +65,70 @@ app.whenReady().then(async () => {
   });
 });
 
-// Quit when all windows are closed, except on macOS. There, it's common
-// for applications and their menu bar to stay active until the user quits
-// explicitly with Cmd + Q.
+// Quit when the window closes, except on Mac.
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
   }
 });
 
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and import them here.
+// --- window.api handlers (see preload.js) ---
+
+// Same voice settings as Joseph's scripts.
+const TTS_MODEL_ID = 'eleven_v4_turbo';
+const TTS_SPEED = 0.9;
+// Stops a bug from burning ElevenLabs credits.
+const TTS_MAX_CHARS = 500;
+
+// tts(text): returns mp3 bytes from ElevenLabs.
+ipcMain.handle('tts', async (_event, text) => {
+  const { ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID } = process.env;
+  if (!ELEVENLABS_API_KEY || !ELEVENLABS_VOICE_ID) {
+    throw new Error('Missing ELEVENLABS_API_KEY or ELEVENLABS_VOICE_ID in .env');
+  }
+  if (typeof text !== 'string' || text.trim() === '') {
+    throw new Error('tts(text) needs a non-empty string');
+  }
+  if (text.length > TTS_MAX_CHARS) {
+    throw new Error(`tts text is too long (${text.length} > ${TTS_MAX_CHARS} chars)`);
+  }
+
+  const res = await fetch(
+    `https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}`,
+    {
+      method: 'POST',
+      headers: {
+        'xi-api-key': ELEVENLABS_API_KEY,
+        'Content-Type': 'application/json',
+        Accept: 'audio/mpeg',
+      },
+      body: JSON.stringify({
+        text,
+        model_id: TTS_MODEL_ID,
+        voice_settings: { stability: 0.5, similarity_boost: 0.75, speed: TTS_SPEED },
+      }),
+    },
+  );
+  if (!res.ok) {
+    throw new Error(`ElevenLabs ${res.status}: ${await res.text()}`);
+  }
+  return new Uint8Array(await res.arrayBuffer());
+});
+
+// notify(title, body): desktop notification.
+ipcMain.on('notify', (_event, title, body) => {
+  if (!Notification.isSupported()) return;
+  new Notification({ title: String(title), body: String(body ?? '') }).show();
+});
+
+// setTrayScore(score): just logs for now. The tray comes in Job 4.
+let trayScore = null;
+ipcMain.on('set-tray-score', (_event, score) => {
+  trayScore = typeof score === 'number' ? Math.round(score) : null;
+  console.log('Tray score:', trayScore ?? '–');
+});
+
+// Sends 'pause' | 'resume' | 'recalibrate' | 'show' to the window. Used by the tray in Job 4.
+function sendTrayCommand(command) {
+  mainWindow?.webContents.send('tray-command', command);
+}
