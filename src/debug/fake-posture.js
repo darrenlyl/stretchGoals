@@ -1,29 +1,11 @@
-// Fake posture panel: sliders and checkboxes that pretend to be Darren's posture brain.
-// Lets Joseph, the UI and Ossie test without a camera. Owner: Shawn (Track 4).
-//
-// Usage:
-//   const stop = mountFakePosturePanel(document.querySelector('#panel'), (state) => { ... });
-//   stop(); // removes the panel and stops the timer
+// Fake posture panel: sliders that send fake PostureStates, so others can test without a camera.
+// Usage: const stop = mountFakePosturePanel(el, (state) => { ... });
+import { ISSUES, ISSUE_IDS } from '../shared/contracts.js';
 
-// TODO(refactor): replace this local copy with
-//   import { ISSUES, ISSUE_IDS, emptyPostureState } from '../shared/contracts.js';
-// once we pull Darren's final contracts. Names and shapes here match TEAM_GUIDE.md Section 3.
-const ISSUES = {
-  forward_head: { medical: 'Forward head posture', layman: 'Neck too far forward' },
-  slouching: { medical: 'Postural kyphosis', layman: 'Hunched over' },
-  head_tilt: { medical: 'Lateral cervical flexion', layman: 'Head tilted to one side' },
-  uneven_shoulders: { medical: 'Shoulder elevation asymmetry', layman: 'One shoulder higher than the other' },
-  too_close: { medical: null, layman: 'Too close to the screen' },
-};
-const ISSUE_IDS = Object.keys(ISSUES);
-
-// How often to send a state, like the real camera (~10 per second).
+// Send a state 10 times a second, like the real camera.
 const TICK_MS = 100;
 
-/**
- * Draws the panel inside `el` and calls `onState(PostureState)` on every change
- * and every TICK_MS. Returns a function that removes the panel.
- */
+// Draws the panel in el and calls onState(state) on every change. Returns stop().
 export function mountFakePosturePanel(el, onState) {
   el.innerHTML = '';
   el.append(makeStyle());
@@ -31,7 +13,7 @@ export function mountFakePosturePanel(el, onState) {
   const panel = make('div', { className: 'fake-posture' });
   panel.append(make('h3', { textContent: 'Fake posture panel' }));
 
-  // --- Top controls: who is there, calibration, score ---
+  // Top controls
   const present = checkbox('Person in frame', true);
   const calibrated = checkbox('Calibrated', true);
   const calibrating = checkbox('Calibrating now', false);
@@ -44,7 +26,7 @@ export function mountFakePosturePanel(el, onState) {
     row(autoScore.label, score.label),
   );
 
-  // --- One row per issue: active, severity, sustained ---
+  // One row per issue
   const issueControls = {};
   for (const id of ISSUE_IDS) {
     const active = checkbox('active', false);
@@ -52,13 +34,13 @@ export function mountFakePosturePanel(el, onState) {
     const sustained = checkbox('sustained', false);
     const name = make('span', { className: 'issue-name', textContent: id });
     panel.append(row(name, active.label, severity.label, sustained.label));
-    // startedAt = when this issue was switched on, so we can count durationSec
+    // startedAt is used to count durationSec
     issueControls[id] = { active, severity, sustained, startedAt: null };
   }
 
   el.append(panel);
 
-  // --- Turn the controls into a PostureState ---
+  // Read the controls into a PostureState
   function buildState() {
     const now = performance.now();
     const isPresent = present.input.checked;
@@ -108,7 +90,7 @@ export function mountFakePosturePanel(el, onState) {
         severity: severityById,
         headForward: severityById.forward_head,
         slouch: severityById.slouching,
-        // Fake angles so Ossie has something to copy: up to 20° of tilt
+        // Fake angles for Ossie
         headTiltDeg: isPresent ? severityById.head_tilt * 20 : null,
         shoulderTiltDeg: isPresent ? severityById.uneven_shoulders * 10 : null,
         closeness: isPresent ? 1 + severityById.too_close * 0.4 : null,
@@ -119,7 +101,7 @@ export function mountFakePosturePanel(el, onState) {
     };
   }
 
-  // --- Send it out: right away, on every change, and on a timer ---
+  // Send now, on every change, and on a timer
   const emit = () => onState(buildState());
   panel.addEventListener('input', emit);
   const timer = setInterval(emit, TICK_MS);
@@ -132,9 +114,7 @@ export function mountFakePosturePanel(el, onState) {
   };
 }
 
-// ---------------------------------------------------------------------------
-// Small helpers for building the HTML
-// ---------------------------------------------------------------------------
+// --- HTML helpers ---
 
 function make(tag, props = {}) {
   return Object.assign(document.createElement(tag), props);
@@ -153,7 +133,7 @@ function checkbox(text, checked) {
   return { input, label };
 }
 
-// A slider with its current value shown next to it. Call show() to refresh the number.
+// Slider with its value shown next to it. show() refreshes the number.
 function slider(text, min, max, step, value) {
   const input = make('input', { type: 'range', min, max, step, value });
   const valueText = make('span', { className: 'value' });

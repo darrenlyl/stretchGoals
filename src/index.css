@@ -7,13 +7,11 @@ body {
   padding: 2rem;
 }
 
-/* Mirror the camera so it feels like looking in a mirror.
-   This only flips what you SEE, not the data Jordan sends to Darren. */
+/* Mirror the video. Only the picture flips, not the data. */
 #camera-video {
   transform: scaleX(-1);
 }
 
-/* Friendly message shown when the camera can't start (empty = hidden). */
 #camera-error {
   color: #b00020;
   font-weight: 600;

@@ -1,12 +1,9 @@
-// Renderer entry point: wires the camera, posture, voice, Ossie and UI modules together.
-// See TEAM_GUIDE.md Section 2 for the plan. Runs in the window, not in Node.
-
+// Window entry point. Connects all the modules (TEAM_GUIDE.md Section 2).
 import './index.css';
 
 console.log('stretchGoals renderer loaded');
 
-// TEMPORARY (Job 2): plain camera feed to prove permission works.
-// Jordan's startCamera() replaces this at checkpoint 1.
+// TEMPORARY: plain camera feed. Replaced by Jordan's startCamera() at checkpoint 1.
 const video = document.querySelector('#camera-video');
 const cameraError = document.querySelector('#camera-error');
 
@@ -21,7 +18,7 @@ async function showCamera() {
   }
 }
 
-// Turns a getUserMedia error into a sentence a normal person can act on.
+// Turns a camera error into a helpful message.
 function cameraErrorMessage(err) {
   const onWindows = navigator.userAgent.includes('Windows');
   if (err.name === 'NotAllowedError') {
