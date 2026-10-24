@@ -3,52 +3,16 @@
   <head>
     <meta charset="utf-8" />
     <title>Camera dev page</title>
-    <style>
-      body {
-        font-family: system-ui, sans-serif;
-        margin: 24px;
-      }
-
-      #camera-video {
-        width: 640px;
-        max-width: 100%;
-        background: #222;
-        border-radius: 8px;
-        transform: scaleX(-1); /* mirror it so it feels like looking in a mirror */
-      }
-
-      #status {
-        color: #555;
-      }
-    </style>
+    <link rel="stylesheet" href="./dev.css" />
   </head>
   <body>
     <h1>Camera dev page</h1>
     <p id="status">Starting camera…</p>
+    <p id="nose"></p>
 
     <!-- autoplay + playsinline + muted: start playing on their own, inside the page -->
     <video id="camera-video" autoplay playsinline muted></video>
 
-    <script type="module">
-      const video = document.querySelector("#camera-video");
-      const status = document.querySelector("#status");
-
-      try {
-        // Ask for the camera. The browser shows a permission prompt the first time.
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
-
-        // Plug the live stream into the <video> tag and start it.
-        video.srcObject = stream;
-        await video.play();
-
-        // Show which camera we got. On Windows, an "IR" camera means we grabbed the wrong one.
-        const cameraName = stream.getVideoTracks()[0].label;
-        status.textContent = `Camera on: ${cameraName}`;
-      } catch (err) {
-        // NotAllowedError = permission denied, NotReadableError = another app is using the camera.
-        status.textContent = `Couldn't start the camera: ${err.name}. ${err.message}`;
-        console.error(err);
-      }
-    </script>
+    <script type="module" src="./dev.js"></script>
   </body>
 </html>
