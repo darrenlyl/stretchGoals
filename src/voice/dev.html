@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Voice Coach Playground</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 980px; margin: 24px auto; padding: 0 16px; color: #222; background: #fafafa; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+    section { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 16px; }
+    h2 { font-size: 16px; margin: 0 0 12px; }
+    button { font: inherit; padding: 6px 12px; border-radius: 6px; border: 1px solid #bbb; background: #fff; cursor: pointer; margin: 2px; }
+    .muted { color: #666; font-size: 14px; }
+    #log { height: 300px; overflow-y: auto; font-size: 14px; line-height: 1.5; }
+    #log p { margin: 2px 0; }
+  </style>
+</head>
+<body>
+  <h1>Voice Coach Playground</h1>
+  <p class="muted">Move Shawn's fake posture sliders. The voice coach (src/voice/index.js) decides when to speak, in Ellie's voice.
+    Click anywhere once first: browsers block sound until you do.</p>
+
+  <div class="grid">
+    <section>
+      <h2>Fake posture (Shawn's panel)</h2>
+      <div id="panel"></div>
+    </section>
+
+    <section>
+      <h2>Controls</h2>
+      <p><label><input type="checkbox" id="fast" checked /> Fast rules for testing (10 s gaps instead of 1–3 min)</label></p>
+      <p><label><input type="checkbox" id="mute" /> Mute</label></p>
+      <p><label><input type="checkbox" id="agent" /> Pretend a Maizy conversation is open (coach goes quiet)</label></p>
+      <p>
+        <button id="stretch">Start chest opener</button>
+        <button id="stop">Stop stretch</button>
+        <button id="line">Say a praise line</button>
+      </p>
+      <h2>What she said</h2>
+      <div id="log"></div>
+    </section>
+  </div>
+
+  <script type="module">
+    import { voiceCoach, speakLine, onSpeech, RULES } from "./index.js";
+    import { startStretch, stopStretch } from "../stretches/index.js";
+    import { mountFakePosturePanel } from "../debug/fake-posture.js";
+
+    const $ = (id) => document.getElementById(id);
+
+    // Every fake PostureState from Shawn's panel goes straight into the voice coach
+    mountFakePosturePanel($("panel"), (state) => voiceCoach.update(state));
+
+    // Fast rules make testing quicker. Real rules: 3 min per issue, 60 s between lines.
+    const REAL = { ...RULES };
+    function applyRules() {
+      const fast = $("fast").checked;
+      RULES.sameIssueMs = fast ? 20_000 : REAL.sameIssueMs;
+      RULES.anyLineMs = fast ? 10_000 : REAL.anyLineMs;
+      RULES.offerAfterMs = fast ? 10_000 : REAL.offerAfterMs;
+    }
+    $("fast").onchange = applyRules;
+    applyRules();
+
+    $("mute").onchange = () => voiceCoach.setMuted($("mute").checked);
+    $("agent").onchange = () => voiceCoach.setAgentActive($("agent").checked);
+    $("stretch").onclick = () => startStretch("chest_opener");
+    $("stop").onclick = () => stopStretch();
+    $("line").onclick = () => speakLine("praise.fixed");
+
+    // Log every line as it starts playing
+    onSpeech((text) => {
+      const p = document.createElement("p");
+      p.textContent = `${new Date().toLocaleTimeString()}  ${text}`;
+      $("log").prepend(p);
+    });
+  </script>
+</body>
+</html>

@@ -148,3 +148,6 @@ out/
 # Voice test audio (Track 3)
 hello.mp3
 voice-tuning/
+
+# IndyKite credentials (never commit)
+.secrets/
