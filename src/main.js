@@ -13,6 +13,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
 import { TRAY_ICON_16, TRAY_ICON_32 } from './tray-icon.js';
+import { checkSafety } from './safety-check.js';
+import { TOKEN_FILES } from '../indykite/ik.mjs';
 
 // Windows installer shortcut handling.
 if (started) {
@@ -21,11 +23,14 @@ if (started) {
 
 // Only one copy at a time: two would fight over the camera, the mic and the saved data.
 // A second launch just brings the first one's window forward.
-if (!app.requestSingleInstanceLock()) {
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) {
   app.quit();
 } else {
   app.on('second-instance', () => showWindow());
 }
+// A copy that is about to quit (second launch, Squirrel installer event) must not open a window or tray first.
+const exiting = started || !gotLock;
 
 // Load secrets from .env. Only the main process can see them.
 // npm start uses the project's .env. The packaged app uses one in its data folder
@@ -86,6 +91,8 @@ const createWindow = () => {
 };
 
 app.whenReady().then(async () => {
+  if (exiting) return;
+
   // Mac asks for camera permission. Windows uses its Settings instead.
   if (process.platform === 'darwin') {
     const allowed = await systemPreferences.askForMediaAccess('camera');
@@ -123,6 +130,12 @@ ipcMain.handle('maizy-signed-url', async () => {
   }
   return (await res.json()).signed_url;
 });
+
+// safetyCheck({ personId, conditions, cleared }): which stretches suit them, asked of IndyKite
+// (src/safety-check.js). The IndyKite key stays here. The packaged app keeps it in its data folder:
+// ~/Library/Application Support/stretchGoals/.secrets/app-agent-credential.json
+TOKEN_FILES.push(path.join(app.getPath('userData'), '.secrets', 'app-agent-credential.json'));
+ipcMain.handle('safety-check', (_event, selection) => checkSafety(selection));
 
 // Any real quit (tray Quit, Cmd+Q, shutting down) lets the window close.
 app.on('before-quit', () => {
@@ -211,6 +224,14 @@ ipcMain.on('set-maizy-status', (_event, status) => {
     updateTrayScore();
     updateTrayMenu();
   }
+});
+
+// setPaused(paused): the window paused or resumed itself (its own button), so the tray menu follows.
+ipcMain.on('set-paused', (_event, value) => {
+  const next = Boolean(value);
+  if (next === paused) return;
+  paused = next;
+  if (tray) updateTrayMenu();
 });
 
 // Sends 'pause' | 'resume' | 'recalibrate' | 'show' | 'talk' | 'end-call' | 'toggle-listen' to the window.

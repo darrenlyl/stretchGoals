@@ -14,6 +14,7 @@ import { postureNotifier } from './notifications.js';
 import { createMaizyAgent } from './voice/agent/maizy-agent.js';
 import { createAppControls } from './voice/agent/app-controls.js';
 import { createWakeWord } from './voice/wake-word.js';
+import { createSafety } from './safety.js';
 
 let paused = false;
 let useFake = false; // dev only: the fake posture panel drives the app instead of the camera
@@ -24,11 +25,16 @@ let heyMaizyOn = readSetting('maizy.heyMaizy', true);
 // Maizy, the live voice agent: woken by "Hey Maizy", the tray's Talk, or the app (WAKE_RULES)
 // ---------------------------------------------------------------------------
 
+// Health check (Settings): only stretches that suit their conditions, decided by IndyKite.
+// Everything below gets safety.stretches, never the unfiltered list.
+const safety = createSafety(stretches);
+
 const canCall = Boolean(window.api?.maizySignedUrl); // only inside Electron, where the API key lives
 const agent = createMaizyAgent({
   Conversation,
   getSignedUrl: () => window.api.maizySignedUrl(),
   controls: createAppControls(document.querySelector('#app')), // "can you start the camera?"
+  safety,
   onLog: (kind, text) => console.log(`[maizy] ${kind}: ${text}`),
 });
 const wake = createWakeWord({
@@ -95,7 +101,7 @@ const voiceForUi = {
 // ---------------------------------------------------------------------------
 
 // The UI builds every screen, including the camera and Maizy's slot. Its Start button calls camera.startCamera().
-ui.mount(document.querySelector('#app'), { camera, posture, voice: voiceForUi, stretches });
+ui.mount(document.querySelector('#app'), { camera, posture, voice: voiceForUi, stretches: safety.stretches, safety });
 maizy.mount(document.querySelector('#maizy'));
 // A small Maizy (head and shoulders) in the rail's dock, next to the live score
 const miniMaizy = createMaizy();
@@ -129,6 +135,7 @@ ui.onCameraChange((on) => {
 ui.onPauseChange((value) => {
   paused = value;
   postureNotifier.setPaused(value);
+  window.api?.setPaused(value); // the tray's Pause/Resume item follows
   updateAutoWake();
   if (paused) agent.end();
   syncListening();

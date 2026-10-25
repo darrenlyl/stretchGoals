@@ -19,6 +19,15 @@ const TIPS = {
   too_close: 'Lean back a little from the screen.',
 };
 
+// How the coach says it out loud: a friendly sentence, then the tip ("Hey, you're a little hunched over. ...")
+const SPOKEN = {
+  forward_head: "Hey, your neck's drifted a little forward.",
+  slouching: "Hey, you're a little hunched over.",
+  head_tilt: "Hey, your head's tilted to one side.",
+  uneven_shoulders: "Hey, one shoulder's a little higher than the other.",
+  too_close: "Hey, you're getting close to the screen.",
+};
+
 let paused = false;
 let sustainedBefore = new Set();
 const lastAlertAt = {}; // issue id -> when it was last notified (or seen in the app)
@@ -54,7 +63,7 @@ function update(state, now = Date.now()) {
   const names = ISSUES[issue.id];
   const title = names.medical ?? names.layman;
   const body = names.medical ? `${names.layman}. ${TIPS[issue.id]}` : TIPS[issue.id];
-  notify(title, body);
+  notify(title, body, `${SPOKEN[issue.id]} ${TIPS[issue.id]}`);
   lastAlertAt[issue.id] = now;
   lastNotifyAt = now;
 }
