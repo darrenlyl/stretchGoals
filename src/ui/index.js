@@ -320,7 +320,7 @@ const TEMPLATE = `
 
       <!-- 1. Welcome / camera permission -->
       <section class="sg-card sg-welcome" aria-labelledby="sg-welcome-title">
-        <h1 id="sg-welcome-title" class="sg-title"><span class="sg-brand-name">stretch<span>Goals</span></span> <span class="sg-title-with">with Maizy</span></h1>
+        <h1 id="sg-welcome-title" class="sg-title"><span class="sg-brand-name">Stretch<span>Goals</span></span> <span class="sg-title-with">with Maizy</span></h1>
         <div class="sg-actions">
           <button type="button" class="sg-btn sg-btn-primary" data-ref="startBtn">Start camera</button>
         </div>

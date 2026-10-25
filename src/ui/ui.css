@@ -706,7 +706,7 @@ body.sg-host {
 
 /* Welcome: text on the left, Maizy on the right */
 .sg-app[data-screen="welcome"] .sg-grid {
-  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
   grid-template-rows: minmax(0, 1fr);
   grid-template-areas: "welcome maizy";
 }
@@ -799,7 +799,7 @@ body.sg-host {
 /* The app's name is the welcome's heading (the small logo in the top bar is hidden here) */
 .sg-welcome .sg-title {
   max-width: none;
-  font-size: clamp(44px, 17cqi, 132px);
+  font-size: clamp(44px, 18.5cqi, 180px); /* "StretchGoals" fills the column's width */
   line-height: 0.98;
   letter-spacing: -0.045em;
   white-space: nowrap;
@@ -1724,7 +1724,7 @@ body.sg-host {
     --sg-pad: 16px;
   }
   .sg-app[data-screen="welcome"] .sg-grid {
-    grid-template-columns: minmax(0, 6fr) minmax(0, 5fr);
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
   }
   .sg-screen-lede {
     display: none;
