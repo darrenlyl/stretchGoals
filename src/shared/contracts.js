@@ -113,7 +113,7 @@ export const ISSUE_IDS = Object.freeze(Object.keys(ISSUES));
 // ---------------------------------------------------------------------------
 //   src/camera/index.js     Jordan  startCamera(videoEl, canvasEl) -> Promise, stopCamera(), onPoseFrame(cb) -> unsubscribe, setOverlayVisible(bool)
 //   src/posture/index.js    Darren  analyze(frame) -> PostureState, startCalibration(ms = 3000) -> Promise<CalibrationResult>, resetCalibration(), setSensitivity(0–1)
-//   src/voice/index.js      Joseph  voiceCoach.update(state), voiceCoach.setMuted(bool), speakLine(lineId) -> Promise, notify(title, body) (shows AND reads it aloud)
+//   src/voice/index.js      Joseph  voiceCoach.update(state), voiceCoach.setMuted(bool), speakLine(lineId) -> Promise, notify(title, body, spoken?) (shows AND reads it aloud)
 //   src/voice/agent/maizy-agent.js Joseph createMaizyAgent(...) -> { update(state), start(reason), end(), setAutoWake(bool), onChange(cb) }
 //   src/voice/agent/app-controls.js Joseph createAppControls(root) -> { list(), press(id) }  (Maizy presses buttons when asked)
 //   src/voice/wake-word.js  Joseph  createWakeWord(...) -> { start(), stop(), onState(cb) }  ("Hey Maizy", offline)
