@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Maizy Agent Test</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 960px; margin: 24px auto; padding: 0 16px; color: #222; background: #fafafa; }
+    h1 { font-size: 22px; margin-bottom: 4px; }
+    .sub { color: #666; margin-top: 0; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
+    section { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 16px; }
+    h2 { font-size: 16px; margin: 0 0 12px; }
+    button { font: inherit; padding: 6px 12px; border-radius: 6px; border: 1px solid #bbb; background: #fff; cursor: pointer; margin: 2px; }
+    button.primary { background: #2563eb; border-color: #2563eb; color: #fff; }
+    button.active { background: #fde68a; border-color: #d97706; }
+    button:disabled { opacity: 0.5; cursor: default; }
+    .big { font-size: 32px; font-weight: 600; }
+    .muted { color: #666; font-size: 14px; }
+    #log { height: 360px; overflow-y: auto; font-size: 14px; line-height: 1.4; }
+    #log p { margin: 4px 0; }
+    .you { color: #1d4ed8; } .maizy { color: #047857; } .app { color: #92400e; } .err { color: #b91c1c; }
+  </style>
+</head>
+<body>
+  <h1>Maizy Agent Test</h1>
+  <p class="sub">Talk to Maizy, then pretend to slouch with the buttons. She should react on her own.</p>
+
+  <div class="grid">
+    <section>
+      <h2>1. Talk</h2>
+      <button id="start" class="primary">Start talking to Maizy</button>
+      <button id="end" disabled>End</button>
+      <p class="muted">Status: <b id="status">disconnected</b> · Maizy is <b id="mode">–</b></p>
+      <label class="muted"><input type="checkbox" id="fast" checked /> Fast cooldowns for testing (20 s instead of 3 min)</label>
+    </section>
+
+    <section>
+      <h2>2. Fake posture</h2>
+      <p class="muted">Pick what your body is "doing". After 5 seconds it counts as sustained.</p>
+      <div id="issues"></div>
+      <p><label class="muted">How bad: <input type="range" id="severity" min="0.3" max="1" step="0.1" value="0.6" /></label></p>
+      <p><span class="big" id="score">100</span> <span class="muted">score</span></p>
+      <p class="muted" id="issueInfo">Sitting tall</p>
+      <p class="muted" id="stretchInfo"></p>
+    </section>
+  </div>
+
+  <section style="margin-top: 16px">
+    <h2>3. What's happening</h2>
+    <div id="log"></div>
+  </section>
+
+  <script type="module" src="./agent-dev.js"></script>
+</body>
+</html>

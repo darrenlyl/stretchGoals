@@ -6,3 +6,13 @@ body {
   max-width: 38rem;
   padding: 2rem;
 }
+
+/* Mirror the video. Only the picture flips, not the data. */
+#camera-video {
+  transform: scaleX(-1);
+}
+
+#camera-error {
+  color: #b00020;
+  font-weight: 600;
+}
