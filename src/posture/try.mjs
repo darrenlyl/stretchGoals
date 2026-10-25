@@ -75,3 +75,13 @@ for (let t = 40100; t <= 43000; t += 100) {
   const s = analyze({ ...makeFakeFrame(), timestamp: t });
   if (t % 500 === 100) console.log("sat up t =", t / 1000, " issues:", s.issues.length);
 }
+
+
+// --- Smoothing: the score should glide down, not jump ---
+const done4 = startCalibration(3000);
+for (let t = 50000; t <= 53000; t += 100) analyze({ ...makeFakeFrame(), timestamp: t });
+await done4;
+for (let t = 53100; t <= 56000; t += 100) {
+  const s = analyze({ ...makeFakeFrame({ neckDrop: 0.2 }), timestamp: t });
+  if (t % 300 === 0 || t === 53100) console.log("smooth t =", t / 1000, " score:", s.score);
+}

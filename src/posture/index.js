@@ -8,11 +8,25 @@ let calib = null;
 let sensitivity = 0.5;
 let startedAt = {};    // issue id → when it switched ON
 let belowSince = {};   // issue id → when it dropped below 0.15 (the "turning off" countdown)
+let smooth = null;     // the smoothed metrics; null = start fresh
+const ALPHA = 0.2;     // how far each new frame pulls the smoothed value: 0.2 = 20%
+
+function smoothMetrics(m){
+    if(smooth === null){
+        smooth = { ...m };
+        return smooth;
+    }
+    for (const key in m){
+        smooth[key] = ALPHA * m[key] + (1 - ALPHA) * smooth[key];
+    }
+    return smooth;
+}
 
 // Forget every issue (after recalibrating, old issues were judged against the old baseline)
 function clearIssues() {
   startedAt = {};
   belowSince = {};
+  smooth = null;
 }
 
 export function setSensitivity(value){
@@ -69,6 +83,7 @@ export function analyze(frame) {
 
   // Can't judge yet: nobody there, can't see shoulders, or no baseline
   if (!m || !baseline) {
+    smooth = null;   // start fresh when they're measurable again
     return {
       timestamp: frame.timestamp,
       present,
@@ -81,7 +96,8 @@ export function analyze(frame) {
     };
   }
 
-  const severity = computeSeverities(m, baseline, 1.5 - sensitivity);
+  const sm = smoothMetrics(m);   // calm the camera jitter before judging
+  const severity = computeSeverities(sm, baseline, 1.5 - sensitivity);
   const score = computeScore(severity);
   const issues = [];
 
@@ -129,6 +145,6 @@ export function analyze(frame) {
     calibrationProgress: 0,
     score,
     issues,
-    metrics: { ...m, severity },
+    metrics: { ...sm, severity },
   };
 }
