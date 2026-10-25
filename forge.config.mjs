@@ -9,6 +9,13 @@ import { FuseV1Options, FuseVersion } from '@electron/fuses';
 const config = {
   packagerConfig: {
     asar: true,
+    // Mac: the packaged app's own name for permissions (camera, notifications)
+    appBundleId: 'com.stretchgoals.app',
+    extendInfo: {
+      // Mac shows this when asking for the camera. Without it, the packaged app can't use the camera.
+      NSCameraUsageDescription:
+        'stretchGoals uses your camera to check your posture. Video never leaves your computer.',
+    },
   },
   rebuildConfig: {},
   makers: [
