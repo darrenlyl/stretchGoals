@@ -6,7 +6,7 @@
 import { ISSUES } from './shared/contracts.js';
 import { notify } from './voice/index.js';
 
-const SAME_ISSUE_MS = 3 * 60_000; // wait 3 minutes before notifying about the same issue again
+const SAME_ISSUE_MS = 10_000; // wait 10 seconds before notifying about the same issue again
 const ANY_NOTIFY_MS = 60_000; // and at least 60 seconds between any two notifications
 
 // One short fix per issue, shown under the issue name
