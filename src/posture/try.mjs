@@ -37,3 +37,9 @@ import { computeSeverities } from "./severity.js";
 const base = calibrate(upright).baseline;
 console.log("sev upright:", computeSeverities(computeMetrics(makeFakeFrame()), base));
 console.log("sev head down:", computeSeverities(computeMetrics(makeFakeFrame({ neckDrop: 0.2 })), base));
+
+import { analyze, setBaseline } from "./index.js";
+console.log("before calibrating:", analyze(makeFakeFrame()).score);
+setBaseline(base);
+console.log("upright:", analyze(makeFakeFrame()).score, analyze(makeFakeFrame()).issues);
+console.log("head down:", analyze(makeFakeFrame({ neckDrop: 0.2 })).score, analyze(makeFakeFrame({ neckDrop: 0.2 })).issues);

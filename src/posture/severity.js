@@ -30,4 +30,4 @@ export function computeScore(sev){
     0.35 * sev.uneven_shoulders + 
     0.3 * sev.too_close;
     return Math.round( 100 * (1 - Math.min(1, penalty)));
-}
+};
