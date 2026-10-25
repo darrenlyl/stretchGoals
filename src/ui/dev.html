@@ -76,12 +76,19 @@
         width: 1000px;
         height: 700px;
         margin: 16px;
-        background: #fff;
         outline: 1px solid #b5b3ab;
       }
       #frame[data-size="800"] {
         width: 800px;
         height: 600px;
+      }
+      #frame[data-size="900"] {
+        width: 900px;
+        height: 640px;
+      }
+      #frame[data-size="1440"] {
+        width: 1440px;
+        height: 900px;
       }
       #frame[data-size="fill"] {
         width: auto;
@@ -113,6 +120,8 @@
         <select id="size">
           <option value="1000">1000 × 700</option>
           <option value="800">800 × 600</option>
+          <option value="900">900 × 640</option>
+          <option value="1440">1440 × 900</option>
           <option value="fill">Fill page</option>
         </select>
         <select id="jump" title="ui.showScreen(name)">
@@ -268,7 +277,21 @@
         setOverlayVisible(v) {
           log(`camera.setOverlayVisible(${v})`);
         },
+        // Two pretend cameras, so the Settings camera picker shows up (pick "Desk cam" to see an error)
+        async listCameras() {
+          return [
+            { deviceId: "built-in", label: "Built-in camera" },
+            { deviceId: "desk", label: "Desk cam (fails)" },
+          ];
+        },
+        currentCameraId: () => currentCamera,
+        async switchCamera(deviceId) {
+          log(`camera.switchCamera("${deviceId}")`);
+          if (deviceId === "desk") throw new DOMException("Fake camera failure", "NotReadableError");
+          currentCamera = deviceId;
+        },
       };
+      let currentCamera = "built-in";
 
       // ── Fake posture ────────────────────────────────────────────────────
       // startCalibration animates calibrationProgress over `ms` by feeding states.
