@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Camera dev page</title>
+    <link rel="stylesheet" href="./dev.css" />
+  </head>
+  <body>
+    <h1>Camera dev page</h1>
+    <p id="status">Starting camera…</p>
+    <p id="nose"></p>
+
+    <div id="camera-stage">
+        <video id="camera-video" autoplay playsinline muted></video>
+        <canvas id="camera-overlay"></canvas> <!--transparent drawing layer that sits exactly over the video-->
+    </div>
+
+    <!-- autoplay + playsinline + muted: start playing on their own, inside the page -->
+    
+
+    <script type="module" src="./dev.js"></script>
+  </body>
+</html>
