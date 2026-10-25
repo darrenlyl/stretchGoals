@@ -7,4 +7,16 @@ export function median(values){
     }
 
     return sorted[mid];
-}
+};
+
+const KEYS = ["neckRatio", "headRatio", "headTiltDeg", "shoulderTiltDeg", "shoulderWidth", "shoulderY"];
+
+export function computeBaseline(samples){
+    const baseline = {};
+    for (const key of KEYS){
+        const values = samples.map((s) => s[key]);
+        baseline[key] = median(values);
+    };
+
+    return baseline; 
+};
