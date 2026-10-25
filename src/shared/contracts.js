@@ -111,7 +111,8 @@ export const ISSUE_IDS = Object.freeze(Object.keys(ISSUES));
 // ---------------------------------------------------------------------------
 // 3.4 Module APIs (for reference; each owner implements their own)
 // ---------------------------------------------------------------------------
-//   src/camera/index.js     Jordan  startCamera(videoEl, canvasEl) -> Promise, stopCamera(), onPoseFrame(cb) -> unsubscribe, setOverlayVisible(bool)
+//   src/camera/index.js     Jordan  startCamera(videoEl, canvasEl) -> Promise, stopCamera(), onPoseFrame(cb) -> unsubscribe, setOverlayVisible(bool),
+//                                   listCameras() -> Promise<{ deviceId, label }[]>, switchCamera(deviceId), currentCameraId(), describeCameraError(err) -> string
 //   src/posture/index.js    Darren  analyze(frame) -> PostureState, startCalibration(ms = 3000) -> Promise<CalibrationResult>, resetCalibration(), setSensitivity(0–1)
 //   src/voice/index.js      Joseph  voiceCoach.update(state), voiceCoach.setMuted(bool), speakLine(lineId) -> Promise, notify(title, body) (shows AND reads it aloud)
 //   src/voice/agent/maizy-agent.js Joseph createMaizyAgent(...) -> { update(state), start(reason), end(), setAutoWake(bool), onChange(cb) }

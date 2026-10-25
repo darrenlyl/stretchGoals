@@ -218,9 +218,12 @@ These IDs connect everything:
 
 | Module | Owner | Exports |
 |---|---|---|
-| `src/camera/index.js` | Jordan | `startCamera(videoEl, canvasEl) → Promise`, `stopCamera()`, `onPoseFrame(cb) → unsubscribe`, `setOverlayVisible(bool)` |
+| `src/camera/index.js` | Jordan | `startCamera(videoEl, canvasEl) → Promise`, `stopCamera()`, `onPoseFrame(cb) → unsubscribe`, `setOverlayVisible(bool)`, `listCameras() → Promise<{ deviceId, label }[]>`, `switchCamera(deviceId)`, `currentCameraId()`, `describeCameraError(err) → string` |
 | `src/posture/index.js` | Darren | `analyze(frame) → PostureState`, `startCalibration(ms = 3000) → Promise<{ ok, reason? }>`, `resetCalibration()`, `setSensitivity(0–1)` |
-| `src/voice/index.js` | Joseph | `voiceCoach.update(state)`, `voiceCoach.setMuted(bool)`, `speakLine(lineId) → Promise` |
+| `src/voice/index.js` | Joseph | `voiceCoach.update(state)`, `voiceCoach.setMuted(bool)`, `speakLine(lineId) → Promise`, `notify(title, body)` (shows a notification and reads it aloud) |
+| `src/voice/agent/maizy-agent.js` | Joseph | `createMaizyAgent(...) → { update(state), start(reason), end(), setAutoWake(bool), onChange(cb) }`: the live Maizy voice agent |
+| `src/voice/agent/app-controls.js` | Joseph | `createAppControls(root) → { list(), press(id) }`: lets Maizy press the app's buttons when asked |
+| `src/voice/wake-word.js` | Joseph | `createWakeWord(...) → { start(), stop(), onState(cb) }`: listens for "Hey Maizy" on the computer |
 | `src/stretches/index.js` | Joseph | `STRETCHES` (data array), `stretchesFor(issueId) → Stretch[]`, `startStretch(id)`, `stopStretch()`, `onStretchEvent(cb) → unsubscribe` |
 | `src/maizy/index.js` | Shawn | `maizy.mount(el)`, `maizy.update(state)`, `maizy.celebrate()`, `maizy.setVitality(0–1 \| null)` |
 | `src/debug/fake-posture.js` | Shawn | `mountFakePosturePanel(el, onState)`: sliders and checkboxes that emit fake `PostureState`s |
@@ -231,10 +234,12 @@ Stretch events: `{ type: "start" | "step" | "tick" | "end", stretchId, stepIndex
 ### 3.5 `window.api`: the bridge to the Electron main process (Shawn builds it, everyone uses it)
 
 ```js
-window.api.tts(text)          // → Promise<Uint8Array> of mp3 bytes from ElevenLabs (the key stays in the main process)
-window.api.notify(title, body)// native desktop notification (Mac or Windows)
-window.api.setTrayScore(score)// number, or null to show "–" in the tray (Mac menu bar / Windows taskbar)
-window.api.onTrayCommand(cb)  // cb("pause" | "resume" | "recalibrate" | "show")
+window.api.tts(text)           // → Promise<Uint8Array> of mp3 bytes from ElevenLabs (the key stays in the main process)
+window.api.notify(title, body) // native desktop notification (Mac or Windows); call voice.notify instead so it's also read aloud
+window.api.maizySignedUrl()    // → Promise<string>, a short-lived link for one call with Maizy (the key stays in main)
+window.api.setTrayScore(score) // number, or null to show "–" in the tray (Mac menu bar / Windows taskbar)
+window.api.setMaizyStatus(s)   // { call, wake, listenOn }: the Maizy dot and menu items in the tray
+window.api.onTrayCommand(cb)   // cb("pause" | "resume" | "recalibrate" | "show" | "talk" | "end-call" | "toggle-listen")
 ```
 
 ### 3.6 Changing a contract
@@ -712,15 +717,15 @@ Maizy doesn't do stretches; the voice and the UI's stretch screen guide them.
 0. ✅ **Scaffold.** Electron Forge with the Vite template. Each track has its folder; `.env` is git-ignored and `.env.example` lists `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID` and `ELEVENLABS_AGENT_ID`. The Forge config is `forge.config.mjs`.
 1. ✅ **Fake posture panel** (`src/debug/fake-posture.js`). A score slider, and for each issue an "active" checkbox, a severity slider and a "sustained" toggle. It sends a `PostureState` on every change and 10 times a second. Use it with `mountFakePosturePanel(el, (state) => yourModule.update(state))`.
 2. ✅ **Camera in Electron.** `main.js` asks macOS for camera permission before the window opens. The UI's Start camera button calls Jordan's `startCamera()` and shows a friendly message if the camera is blocked or busy. Windows has no prompt; the message points to Settings → Privacy & security → Camera.
-3. ✅ **IPC bridge.** `preload.js` exposes exactly four functions on `window.api` (contract 3.5). `tts` calls ElevenLabs from the main process with the key from `.env` (same model and voice settings as Joseph's scripts, 500 characters max); `notify` shows a desktop notification; `setTrayScore` updates the tray; `onTrayCommand` tells the window when a tray item is clicked.
-4. ✅ **Tray.** A person icon in the menu bar with the score next to it (`tray.setTitle` on Mac; on Windows `setTitle` does nothing, so the score is in the tooltip and left-click opens the window). The menu has Show window, Pause/Resume, Recalibrate and Quit; clicks reach the window through `onTrayCommand` (`pause`, `resume`, `recalibrate`, `show`).
+3. ✅ **IPC bridge.** `preload.js` exposes six functions on `window.api` (contract 3.5): the four below, plus Joseph's `maizySignedUrl` (the Maizy voice agent's call link, key stays in main) and `setMaizyStatus` (Maizy's tray items). `tts` calls ElevenLabs from the main process with the key from `.env` (same model and voice settings as Joseph's scripts, 500 characters max); `notify` shows a desktop notification; `setTrayScore` updates the tray; `onTrayCommand` tells the window when a tray item is clicked.
+4. ✅ **Tray.** A person icon in the menu bar with the score next to it (`tray.setTitle` on Mac; on Windows `setTitle` does nothing, so the score is in the tooltip and left-click opens the window). The menu has Show window, Pause/Resume, Recalibrate and Quit; clicks reach the window through `onTrayCommand` (`pause`, `resume`, `recalibrate`, `show`). Joseph added Maizy's status line, Talk to Maizy / End call and a "Listen for Hey Maizy" checkbox, with a dot before the score while she listens (•) or talks (◉).
 5. ✅ **Maizy.** A 10-frame flipbook the team drew (`src/maizy/maizy-strip.webp`), from fully slumped to standing tall. `maizy.update(state)` picks a frame from the posture score (one frame per 10 points), walks to it one frame at a time, and adds breathing, sway, sparkles from 95, a red glow on sustained issues and an away state. She cheers when you fix an issue. She mounts into `<div id="maizy">`; her background is transparent, so she works in light and dark mode.
 6. ✅ **Wire `app.js`.** The UI mounts into `#app` (its Start button starts the camera), Maizy into the UI's `#maizy` slot. Every PoseFrame goes through `posture.analyze()`, then to the UI, Maizy, the voice coach, notifications and the tray. Pause (UI or tray) stops it all; tray Recalibrate opens calibration. `app.js` sorts issues worst first before passing them on. In dev, tick "Use fake posture" under the app to drive everything from the fake panel instead of the camera.
-7. ✅ **Notifications** (`src/notifications.js`). `postureNotifier.update(state)` shows a desktop notification for a sustained issue only when you're not looking at the app (window hidden, minimised or behind other apps); while you're looking, Maizy and the voice handle it. Same cooldowns as Joseph's voice coach: 3 minutes per issue, 60 seconds between any two. The title is the medical name, the body the plain name plus a quick fix. Tray Pause stops them, and clicking a notification opens the app. `app.setAppUserModelId` is set for Windows. It sends them through `voice.notify`, so the coach reads each one aloud, and the coach skips its own nudge while you are away so nothing is said twice.
+7. ✅ **Notifications** (`src/notifications.js`). `postureNotifier.update(state)` shows a desktop notification for a sustained issue only when you're not looking at the app (window hidden, minimised or behind other apps); while you're looking, Maizy and the voice handle it. Cooldowns: the same issue can repeat after 10 seconds, but never sooner than 60 seconds after any notification, so a lasting issue gets a reminder about once a minute. The title is the medical name, the body the plain name plus a quick fix. Tray Pause stops them, and clicking a notification opens the app. `app.setAppUserModelId` is set for Windows. It sends them through `voice.notify`, so the coach reads each one aloud, and the coach skips its own nudge while you are away so nothing is said twice.
 8. ✅ **Background running.** Closing the window hides it instead of quitting, so posture tracking continues from the tray. Tray → Quit or Cmd+Q really quits. `backgroundThrottling: false` keeps timers at full speed while the window is hidden, and on Mac the dock icon brings the window back.
 9. ✅ **Packaging** with `npm run make`. It builds for the OS you run it on: a `.app` on a Mac, an installer `.exe` on Windows. To ship both, run it once on each.
 
-    **Mac (done):** `npm run make` creates `out/stretchGoals-darwin-arm64/stretchGoals.app` and a zip to share in `out/make/zip/darwin/arm64/`. `forge.config.mjs` sets the app's own ID (`com.stretchgoals.app`), the camera permission text (`NSCameraUsageDescription`, without it the camera shows black), and re-signs the finished app (ad-hoc, no Apple certificate) so macOS allows its notifications. Jordan's MediaPipe files (`public/mediapipe/`) are packed in, so it works with Wi-Fi off. DevTools and the fake posture panel only appear with `npm start`.
+    **Mac (done):** `npm run make` creates `out/stretchGoals-darwin-arm64/stretchGoals.app` and a zip to share in `out/make/zip/darwin/arm64/`. `forge.config.mjs` sets the app's own ID (`com.stretchgoals.app`), the camera and microphone permission texts (`NSCameraUsageDescription`, without it the camera shows black; `NSMicrophoneUsageDescription` for "Hey Maizy"), and re-signs the finished app (ad-hoc, no Apple certificate) so macOS allows its notifications. Jordan's MediaPipe files (`public/mediapipe/`) are packed in, so it works with Wi-Fi off. DevTools and the fake posture panel only appear with `npm start`.
     - The app isn't signed with an Apple certificate, so the first launch needs right-click → Open.
     - **Voice:** the packaged app reads its ElevenLabs key from `~/Library/Application Support/stretchGoals/.env` (copy your project's `.env` there). The key is never packed into the app.
 
