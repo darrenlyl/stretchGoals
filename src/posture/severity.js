@@ -13,9 +13,14 @@ export function computeSeverities(m, baseline, k = 1){
     const unevenShoulders = ramp(Math.abs(m.shoulderTiltDeg - baseline.shoulderTiltDeg) / k, 2.5, 11);
     const tooClose = ramp((m.shoulderWidth / baseline.shoulderWidth - 1) / k, 0.1, 0.43);
 
-    return { 
-        forward_head: forwardHead,
-        slouching: slouching,
+    // Leaning in toward the screen also makes the neck look shorter and the shoulders sit lower,
+    // which fakes forward head and slouching. When someone is too close, trust "too close" and
+    // turn those two down: trust is 1 at normal distance, 0 when fully too close.
+    const trust = 1 - tooClose;
+
+    return {
+        forward_head: forwardHead * trust,
+        slouching: slouching * trust,
         head_tilt: headTilt,
         uneven_shoulders: unevenShoulders,
         too_close: tooClose,
