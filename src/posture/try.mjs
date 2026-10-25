@@ -32,3 +32,8 @@ const empty = Array.from({ length: 30 }, () => ({ timestamp: 0, width: 640, heig
 console.log("upright:", calibrate(upright).ok);
 console.log("empty:", calibrate(empty).reason);
 console.log("too few:", calibrate(upright.slice(0, 3)).reason);
+
+import { computeSeverities } from "./severity.js";
+const base = calibrate(upright).baseline;
+console.log("sev upright:", computeSeverities(computeMetrics(makeFakeFrame()), base));
+console.log("sev head down:", computeSeverities(computeMetrics(makeFakeFrame({ neckDrop: 0.2 })), base));
