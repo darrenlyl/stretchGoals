@@ -5,14 +5,20 @@ import { join } from "node:path";
 
 export const BASE = "https://us.api.indykite.com"; // the sandbox project is in the US region
 
+// Where to look for the token, first match wins. The app adds its data folder for the packaged build.
+export const TOKEN_FILES = [join(process.cwd(), ".secrets", "app-agent-credential.json")];
+
 function readToken() {
-  const file = join(process.cwd(), ".secrets", "app-agent-credential.json");
   let text;
-  try {
-    text = readFileSync(file, "utf8").trim();
-  } catch {
-    throw new Error("No app agent token. Save it as .secrets/app-agent-credential.json (see the Hub).");
+  for (const file of TOKEN_FILES) {
+    try {
+      text = readFileSync(file, "utf8").trim();
+      break;
+    } catch {
+      // try the next place
+    }
   }
+  if (!text) throw new Error("No app agent token. Save it as .secrets/app-agent-credential.json (see the Hub).");
   // The Hub gives either the raw token or a JSON file with a "token" field
   try {
     return JSON.parse(text).token.trim();

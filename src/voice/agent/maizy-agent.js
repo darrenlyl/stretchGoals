@@ -5,7 +5,7 @@
 // A call ends when they say goodbye, after CALL_RULES.quietHangUpSec of silence, or at the
 // 5-minute cap set in maizy-config.mjs.
 //
-//   const agent = createMaizyAgent({ Conversation, getSignedUrl, controls, onLog });
+//   const agent = createMaizyAgent({ Conversation, getSignedUrl, controls, safety, onLog });
 //   agent.update(state)       every PostureState (~10 times a second)
 //   agent.start(reason, { heardAt })  "wake_word" | "talk"; heardAt = when "Hey Maizy" was heard, for timing
 //   agent.warmUp()            keep a signed URL ready so calls start faster (free)
@@ -17,6 +17,7 @@
 // Conversation is the class from @elevenlabs/client, passed in so the app can use the npm
 // package and the test page a CDN copy. getSignedUrl() returns a URL from ElevenLabs.
 // controls (app-controls.js) lets her press the app's buttons when asked; leave it out where there are none.
+// safety (src/safety.js) limits her to stretches that suit their health check, with caution notes.
 import { ISSUES } from "../../shared/contracts.js";
 import * as stretches from "../../stretches/index.js";
 
@@ -40,8 +41,12 @@ export const CALL_RULES = {
 
 const AUTO_REASONS = new Set(["stuck_issue", "long_sitting"]);
 
+// They're wrapping up: "bye Maizy", "goodbye", "see you", "that's all", "I'm done", "talk later".
+export const GOODBYE_PATTERN =
+  /\b(bye|goodbye|good bye|bye-bye|see (you|ya)|talk (to you )?later|that'?s all|i'?m done|that'?ll be all|good ?night)\b/i;
+
 // What she says first when they called her ("Hey Maizy" or Talk). Spoken straight away.
-const GREETINGS = ["Hey! What's up?", "Hi! What can I do for you?", "Hey there, I'm listening.", "Hi! How can I help?"];
+const GREETINGS = ["Hey!", "Yes?", "What's up?", "I'm here."];
 
 // The daily cap survives restarts when localStorage works, and lives in memory when it doesn't.
 const WAKES_KEY = "maizy.autoWakes";
@@ -67,7 +72,8 @@ function countAutoWake() {
   }
 }
 
-export function createMaizyAgent({ Conversation, getSignedUrl, controls = null, onLog = () => {} }) {
+export function createMaizyAgent({ Conversation, getSignedUrl, controls = null, safety = null, onLog = () => {} }) {
+  const allowedStretches = safety?.stretches ?? stretches; // filtered by their health check when there is one
   let conversation = null;
   let status = "idle";
   let reason = null;
@@ -79,7 +85,8 @@ export function createMaizyAgent({ Conversation, getSignedUrl, controls = null, 
 
   // Call bookkeeping
   let lastActivityAt = 0;
-  let goodbyeAt = 0;
+  let goodbyeAt = 0; // when the call started winding down (they said bye, or went quiet)
+  let saidGoodbye = false; // she has spoken since then
   let quietTimer = null;
   const lastToldAt = {}; // issueId -> when she was last told about it
   let lastAppLineAt = 0;
@@ -155,11 +162,22 @@ export function createMaizyAgent({ Conversation, getSignedUrl, controls = null, 
             answered = true;
             onLog("app", `She answered ${((Date.now() - askedAt) / 1000).toFixed(1)} s after the ${why === "wake_word" ? "wake word" : "start"}`);
           }
+          // Saying goodbye: hang up as soon as she has finished her own goodbye
+          if (goodbyeAt && m === "speaking") saidGoodbye = true;
+          if (goodbyeAt && m === "listening" && saidGoodbye) end();
         },
         onMessage: ({ message, role, source }) => {
           lastActivityAt = Date.now();
           if (message.startsWith("[app]")) return; // already logged by tell()
-          onLog((role ?? source) === "user" ? "you" : "maizy", message);
+          const fromUser = (role ?? source) === "user";
+          onLog(fromUser ? "you" : "maizy", message);
+          // "Bye Maizy", "goodbye", "that's all"...: she says a short goodbye, then the call ends
+          // and the app goes back to listening for "Hey Maizy". Backs up her own end_call tool.
+          if (fromUser && !goodbyeAt && GOODBYE_PATTERN.test(message)) {
+            goodbyeAt = Date.now();
+            saidGoodbye = false;
+            onLog("app", "Heard goodbye: ending the call after her reply");
+          }
         },
         onError: (err) => onLog("err", String(err?.message ?? err)),
       });
@@ -174,6 +192,7 @@ export function createMaizyAgent({ Conversation, getSignedUrl, controls = null, 
     onLog("app", `Call started (${why})`);
     lastActivityAt = Date.now();
     goodbyeAt = 0;
+    saidGoodbye = false;
     toldIssue = null;
     setStatus("talking");
     if (!greeting) tell(openingLine(why, detail));
@@ -213,13 +232,17 @@ export function createMaizyAgent({ Conversation, getSignedUrl, controls = null, 
   function checkQuiet() {
     const now = Date.now();
     if (goodbyeAt) {
-      if (now - goodbyeAt > CALL_RULES.goodbyeGraceSec * 1000) end();
+      // Normally she hangs up (or onModeChange does) right after her goodbye. This is the backstop,
+      // never cutting her off mid-sentence unless she runs twice as long.
+      const waited = (now - goodbyeAt) / 1000;
+      if ((waited > CALL_RULES.goodbyeGraceSec && mode !== "speaking") || waited > CALL_RULES.goodbyeGraceSec * 2) end();
       return;
     }
     if (mode === "speaking" || stretchRunning) lastActivityAt = now; // a guided stretch is quiet on purpose
     if (now - lastActivityAt < CALL_RULES.quietHangUpSec * 1000) return;
     tell("[app] They've gone quiet. Say a very short goodbye, then end the call.");
     goodbyeAt = now;
+    saidGoodbye = false;
   }
 
   // ---------------------------------------------------------------------------
@@ -241,19 +264,22 @@ export function createMaizyAgent({ Conversation, getSignedUrl, controls = null, 
 
     get_stretches: ({ issue_id } = {}) => {
       onLog("tool", `get_stretches ${issue_id ?? ""}`);
-      const list = issue_id ? stretches.stretchesFor(issue_id) : stretches.STRETCHES;
+      // Only stretches that suit their health check; safetyNote = what their conditions say to watch for
+      const list = issue_id ? allowedStretches.stretchesFor(issue_id) : allowedStretches.STRETCHES;
+      if (!list.length) return JSON.stringify({ stretches: [], reason: "None suit their health check right now. Don't suggest one; say a clinician can advise." });
       return JSON.stringify(
         list.map(({ id, name, how, cue, reps, bothSides, cautionNote, helps, source }) => ({
           id, name, how, cue, reps, bothSides, cautionNote, helps, source: source.name,
+          ...(safety?.notesFor(id).length && { safetyNote: safety.notesFor(id).join(" ") }),
         })),
       );
     },
 
     start_stretch: ({ stretch_id }) => {
       onLog("tool", `start_stretch ${stretch_id}`);
-      const stretch = stretches.STRETCHES.find((s) => s.id === stretch_id);
-      if (!stretch) return JSON.stringify({ started: false, reason: "No stretch with that id. Use get_stretches." });
-      stretches.startStretch(stretch_id);
+      const stretch = allowedStretches.STRETCHES.find((s) => s.id === stretch_id);
+      if (!stretch) return JSON.stringify({ started: false, reason: "Not available: unknown, or it doesn't suit their health check. Use get_stretches." });
+      allowedStretches.startStretch(stretch_id);
       return JSON.stringify({ started: true, name: stretch.name, steps: stretch.steps.length });
     },
 
@@ -302,7 +328,9 @@ export function createMaizyAgent({ Conversation, getSignedUrl, controls = null, 
   function update(state, now = Date.now()) {
     latest = state;
     trackSitting(state, now);
-    if (status === "talking") postureUpdates(state, now);
+    // Posture updates only in calls the app started about posture. When they called her
+    // ("Hey Maizy", Talk), she sticks to what they asked; the voice coach nudges between calls.
+    if (status === "talking" && AUTO_REASONS.has(reason)) postureUpdates(state, now);
     if (status === "idle") maybeWake(state, now);
   }
 

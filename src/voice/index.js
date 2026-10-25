@@ -3,7 +3,7 @@
 //   voiceCoach.setMuted(bool)       the voice on/off switch in settings
 //   voiceCoach.setAgentActive(bool) true while a Maizy conversation is open, so only one voice talks
 //   speakLine(lineId)               say one line from lines.js, e.g. speakLine("praise.fixed")
-//   notify(title, body)             desktop notification + the coach reads it aloud (use for EVERY notification)
+//   notify(title, body, spoken?)    desktop notification + the coach reads it aloud (use for EVERY notification)
 import { getLine } from "./lines.js";
 import { STRETCHES, onStretchEvent } from "../stretches/index.js";
 let muted = false;
@@ -75,9 +75,9 @@ export function speakLine(lineId) {
  * Show a desktop notification AND read it aloud. Send every notification through here, so the
  * coach reads them all. While muted or on a call with Maizy, only the notification shows.
  */
-export function notify(title, body) {
+export function notify(title, body, spoken) {
   globalThis.window?.api?.notify(title, body);
-  return say(body || title);
+  return say(spoken || body || title); // spoken: what to say out loud, if it should differ from the text
 }
 
 // The same test as src/notifications.js: the window is hidden, minimised or behind other apps.

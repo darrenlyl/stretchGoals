@@ -151,3 +151,6 @@ voice-tuning/
 
 # IndyKite credentials (never commit)
 .secrets/
+
+.superpowers/
+stretchGoals-keys.zip
