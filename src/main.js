@@ -36,8 +36,11 @@ let isQuitting = false;
 
 const createWindow = () => {
   mainWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
+    // Big enough for the UI's dashboard layout (camera, Maizy and score side by side)
+    width: 1200,
+    height: 820,
+    minWidth: 900,
+    minHeight: 640,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       // Keep timers running at full speed when the window is hidden, so posture checks continue.

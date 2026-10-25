@@ -87,8 +87,8 @@
         width: auto;
         height: calc(100vh - 32px);
       }
-      /* Ossie placeholder (dev only; Shawn's ossie.mount() replaces this) */
-      .dev-ossie {
+      /* Maizy placeholder (dev only; Shawn's maizy.mount() replaces this) */
+      .dev-maizy {
         position: absolute;
         inset: 16px;
         display: grid;
@@ -100,7 +100,7 @@
         color: #5b5a55;
         font: 13px/1.4 system-ui, sans-serif;
       }
-      .dev-ossie b {
+      .dev-maizy b {
         color: #1f201d;
         font-size: 14px;
       }
@@ -342,7 +342,7 @@
       });
 
       ui.mount(frame, bare ? {} : { camera: fakeCamera, posture: fakePosture, voice: fakeVoice, stretches: fakeStretches });
-      document.getElementById("ossie").innerHTML = '<div class="dev-ossie"><b>Ossie goes here</b><span>ossie.mount(#ossie)</span></div>';
+      document.getElementById("maizy").innerHTML = '<div class="dev-maizy"><b>Maizy goes here</b><span>maizy.mount(#maizy)</span></div>';
 
       let paused = false;
       ui.onPauseChange((p) => {
