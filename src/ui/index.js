@@ -171,7 +171,10 @@ function allStretches() {
 }
 
 function findStretch(id) {
-  return allStretches().find((s) => s.id === id) ?? FALLBACK_STRETCHES.find((s) => s.id === id) ?? { id };
+  const found = allStretches().find((s) => s.id === id);
+  if (found) return found;
+  // With a health check, STRETCHES is already filtered: a missing one is ruled out, never swapped in
+  return (services.safety ? null : FALLBACK_STRETCHES.find((s) => s.id === id)) ?? { id };
 }
 
 function stretchName(s) {
@@ -195,15 +198,22 @@ function stretchSeconds(s) {
   return total || null;
 }
 
-/** The first stretch that helps this issue, or a general one when there's no issue. */
+/**
+ * The first stretch that helps this issue, or a general one when there's no issue.
+ * With a health check (services.safety) it only picks from the stretches that suit them, and
+ * returns null when none do; it never falls back to the built-in list, which isn't filtered.
+ */
 function stretchFor(issueId) {
   if (issueId) {
     const list = safeCall(stretches?.stretchesFor, issueId);
     if (Array.isArray(list) && list.length) return list[0];
+    if (services.safety) return null; // every stretch for this issue is ruled out: don't swap in an unrelated one
     const backup = FALLBACK_STRETCHES.find((s) => s.helps.includes(issueId));
     if (backup) return findStretch(backup.id);
   }
-  return findStretch("shoulder_rolls");
+  if (!services.safety) return findStretch("shoulder_rolls");
+  const all = allStretches();
+  return all.find((s) => s.id === "shoulder_rolls") ?? all[0] ?? null;
 }
 
 // ─── Icons (outline, drawn on a 24px grid) ──────────────────────────────────
@@ -498,6 +508,16 @@ const TEMPLATE = `
         <button type="button" class="sg-btn sg-btn-secondary" data-ref="recalibrateBtn">Recalibrate</button>
       </div>
       <p class="sg-setting-desc">Sit up tall again to reset what “good posture” means for you.</p>
+    </div>
+
+    <div class="sg-setting sg-health" data-ref="healthSetting" hidden>
+      <div class="sg-setting-row">
+        <span class="sg-setting-title" id="sg-health-title">Health check</span>
+        <span class="sg-setting-value" data-ref="healthStatus"></span>
+      </div>
+      <p class="sg-setting-desc">Tick anything that applies, so we only suggest stretches that suit you. It's optional. Only an anonymous ID and what you tick are sent to IndyKite, which decides; never your name, email or video.</p>
+      <ul class="sg-health-list" data-ref="healthList" aria-labelledby="sg-health-title"></ul>
+      <p class="sg-setting-desc" data-ref="healthSource"></p>
     </div>
   </aside>
 </div>`;
@@ -931,6 +951,8 @@ function renderIssues(mode, issues, severities) {
   }
 }
 
+const NO_STRETCH_HOW = "Your health check rules these stretches out. A doctor or physio can suggest ones that suit you.";
+
 /** The suggested stretch, shown on the dashboard card and at the top of the stretch picker. */
 function renderTip(worstIssue) {
   const issueId = worstIssue?.id ?? null;
@@ -938,6 +960,20 @@ function renderTip(worstIssue) {
   if (suggested?.key === key) return; // nothing changed
   const stretch = stretchFor(issueId);
   suggested = { key, stretch };
+
+  // Their health check rules out every stretch that would fit: say so instead of suggesting one
+  show(refs.tipStart, Boolean(stretch));
+  if (!stretch) {
+    setText(refs.tipLabel, "Suggested stretch");
+    setText(refs.tipName, "No stretch for now");
+    setText(refs.tipFor, issueId ? `For: ${ISSUES[issueId].layman.toLowerCase()}` : "");
+    setData(refs.tipFor, "chip", issueId ? "yes" : "no");
+    setText(refs.tipHow, NO_STRETCH_HOW);
+    setText(refs.tipTime, "");
+    fitTipText(refs.tipHow);
+    renderPickSide();
+    return;
+  }
 
   const seconds = stretchSeconds(stretch);
   const forText = issueId ? `For: ${ISSUES[issueId].layman.toLowerCase()}` : "Good any time you've been sitting a while.";
@@ -954,9 +990,24 @@ function renderTip(worstIssue) {
 /** The picker's top card: the stretch you clicked, or the suggested one until you pick. */
 function renderPickSide() {
   const stretch = picked ?? suggested?.stretch;
-  if (!stretch) return;
-  const issueId = picked || suggested.key === "none" ? null : suggested.key;
   const card = refs.pickName.closest(".sg-card");
+  if (!stretch) {
+    if (!suggested) return; // nothing chosen yet
+    // Their health check rules everything out: no stretch to show, so no Start button
+    if (card.dataset.key === "none-suit") return;
+    card.dataset.key = "none-suit";
+    show(refs.pickStart, false);
+    setText(refs.pickLabel, "Suggested for you");
+    setText(refs.pickName, "No stretch for now");
+    setText(refs.pickFor, "");
+    setData(refs.pickFor, "chip", "no");
+    setText(refs.pickHow, NO_STRETCH_HOW);
+    setText(refs.pickTime, "");
+    fitTipText(refs.pickHow);
+    return;
+  }
+  show(refs.pickStart, true);
+  const issueId = picked || suggested.key === "none" ? null : suggested.key;
   const key = `${picked ? "picked" : issueId ?? "none"}:${stretch.id}`;
   if (card.dataset.key === key) return; // nothing changed
   card.dataset.key = key;
@@ -1011,16 +1062,26 @@ function renderPicker() {
 /** Start the suggested stretch (dashboard card, dock, picker's big button). */
 function onStartStretchClick() {
   if (!suggested) renderTip(null); // e.g. "Stretch now" before the dashboard has picked one
-  startStretch(suggested?.stretch);
+  if (!suggested?.stretch) {
+    showScreen("stretch"); // none suit their health check: the stretch screen says so
+    return;
+  }
+  startStretch(suggested.stretch);
 }
 
 function startStretch(stretch) {
   if (!stretch?.id) return;
+  // Never start one their health check rules out, and don't open the screen if it refuses
+  if (services.safety && !services.safety.isAllowed(stretch.id)) return;
   picked = null;
   const firstSeconds = Number(stretch.steps?.[0]?.seconds) || 0;
   stretchRun = { id: stretch.id, stretch, stepIndex: 0, secondsLeft: firstSeconds, stepTotal: firstSeconds };
+  if (safeCall(stretches?.startStretch, stretch.id) === false) {
+    stretchRun = null;
+    render();
+    return;
+  }
   showScreen("stretch");
-  safeCall(stretches?.startStretch, stretch.id);
 }
 
 /** Dock button: start one, or go back to the one that's running. */
@@ -1073,8 +1134,16 @@ function onStretchEvent(event) {
 
 /** The picker's list: one button per stretch, made once in mount. */
 function buildPickList() {
-  const list = allStretches().length ? allStretches() : FALLBACK_STRETCHES;
+  // With a health check the list is already only the stretches that suit them; none may be left
+  const list = services.safety || allStretches().length ? allStretches() : FALLBACK_STRETCHES;
   refs.pickList.innerHTML = "";
+  if (!list.length) {
+    const li = document.createElement("li");
+    li.className = "sg-pick-none";
+    li.textContent = "None of these suit your health check right now.";
+    refs.pickList.appendChild(li);
+    return;
+  }
   for (const stretch of list) {
     // "Hunched over, one shoulder higher than the other"
     const helps = (stretch.helps ?? []).map((id) => ISSUES[id]?.layman).filter(Boolean);
@@ -1188,6 +1257,77 @@ function addStylesheet() {
   face.load().catch(() => {}); // if it fails, the system font is used instead
 }
 
+// ─── Health check (Settings) ────────────────────────────────────────────────
+
+/**
+ * One tick box per condition (services.safety.CONDITIONS). "Ask first" conditions get a second
+ * box, "A doctor or physio has cleared me", shown while the condition is ticked. Every change is
+ * saved and re-checked with IndyKite; the suggested stretch and the picker follow the answer.
+ */
+function buildHealthCheck(safety) {
+  show(refs.healthSetting, true);
+  const boxes = {}; // condition id -> { has, cleared? }
+  const { conditions, cleared } = safety.get();
+
+  const box = (label, checked) => {
+    const wrap = document.createElement("label");
+    wrap.className = "sg-health-item";
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.checked = checked;
+    const text = document.createElement("span");
+    text.textContent = label;
+    wrap.append(input, text);
+    return { wrap, input };
+  };
+
+  const save = () => {
+    const ticked = Object.keys(boxes).filter((id) => boxes[id].has.input.checked);
+    const ok = ticked.filter((id) => boxes[id].cleared?.input.checked);
+    for (const { has, cleared: box } of Object.values(boxes)) if (box) show(box.wrap, has.input.checked);
+    safety.set({ conditions: ticked, cleared: ok });
+  };
+
+  refs.healthList.replaceChildren(
+    ...safety.CONDITIONS.map((c) => {
+      const li = document.createElement("li");
+      const has = box(c.label, conditions.includes(c.id));
+      has.input.addEventListener("change", save);
+      li.append(has.wrap);
+      boxes[c.id] = { has };
+      if (c.level === "ask_first") {
+        const ok = box("A doctor or physio has cleared me", cleared.includes(c.id));
+        ok.wrap.classList.add("sg-health-cleared");
+        ok.input.addEventListener("change", save);
+        show(ok.wrap, has.input.checked);
+        li.append(ok.wrap);
+        boxes[c.id].cleared = ok;
+      }
+      return li;
+    }),
+  );
+
+  const renderStatus = (s) => {
+    setText(refs.healthStatus, s.source === "checking" ? "Checking…" : `${s.allowed} of ${s.total} stretches suit you`);
+    setText(
+      refs.healthSource,
+      s.source === "indykite"
+        ? "Checked by IndyKite."
+        : s.source === "local"
+          ? "Checked on this computer (IndyKite couldn't be reached)."
+          : "",
+    );
+    // The answer changed which stretches suit them: pick the suggested one and redraw the picker
+    suggested = null;
+    if (picked && !safety.isAllowed(picked.id)) picked = null;
+    delete refs.pickName.closest(".sg-card").dataset.key;
+    buildPickList();
+    if (screen === "dashboard" || screen === "stretch") render();
+  };
+  safety.onChange(renderStatus);
+  renderStatus(safety.status());
+}
+
 function mount(el, givenServices = {}) {
   if (root) {
     console.warn("[ui] ui.mount() was called twice; ignoring the second call.");
@@ -1282,6 +1422,7 @@ function mount(el, givenServices = {}) {
   // Stretch events (Joseph's module, or the fallback)
   safeCall(stretches.onStretchEvent, onStretchEvent);
   buildPickList();
+  if (services.safety) buildHealthCheck(services.safety);
   // Refit the suggested-stretch text whenever its card changes size (window resize, screen change)
   const tipObserver = new ResizeObserver(() => {
     fitTipText(refs.tipHow);

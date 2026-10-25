@@ -1479,6 +1479,56 @@ body.sg-host {
   font-size: 13px;
   color: var(--sg-fg-muted);
 }
+/* Health check: one tick box per condition, with "A doctor or physio has cleared me" under ask-first ones */
+.sg-health-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sg-health-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 7px 8px;
+  margin: 0 -8px;
+  border-radius: var(--sg-radius-sm);
+  font-size: 13.5px;
+  line-height: 1.35;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+.sg-health-item:hover {
+  background: var(--sg-surface-2);
+}
+.sg-health-item input {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin: 1px 0 0;
+  accent-color: var(--sg-vital);
+  cursor: pointer;
+}
+.sg-health-item input:focus-visible {
+  outline: 2px solid var(--sg-vital);
+  outline-offset: 2px;
+}
+.sg-health-cleared {
+  margin-left: 18px; /* tucked under the condition it belongs to */
+  color: var(--sg-fg-muted);
+  font-size: 13px;
+}
+/* Shown in the picker when their health check rules every stretch out */
+.sg-pick-none {
+  grid-column: 1 / -1;
+  padding: 18px 20px;
+  border-radius: var(--sg-radius-sm);
+  background: var(--sg-surface-2);
+  font-size: 15px;
+  color: var(--sg-fg-muted);
+}
 .sg-range {
   width: 100%;
   margin: 10px 0 2px;
