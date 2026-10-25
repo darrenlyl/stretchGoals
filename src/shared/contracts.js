@@ -71,12 +71,12 @@ export const ISSUE_IDS = Object.freeze(Object.keys(ISSUES));
 
 /**
  * @typedef {Object} PostureMetrics
- * Raw-ish numbers for debugging and for Ossie. Every field can be null when we
+ * Raw-ish numbers for debugging and for Maizy. Every field can be null when we
  * can't measure it (nobody in frame, shoulders hidden, not calibrated yet).
  *
  * @property {Record<IssueId, number>} severity
  *   0–1 for EVERY issue, every frame, even ones that are not in `issues` yet.
- *   Ossie: drive joints from these so he moves smoothly instead of snapping
+ *   Maizy: use these so she moves smoothly instead of snapping
  *   when an issue switches on.
  * @property {number}      headForward      0–1, same as severity.forward_head
  * @property {number}      slouch           0–1, same as severity.slouching
@@ -97,7 +97,7 @@ export const ISSUE_IDS = Object.freeze(Object.keys(ISSUES));
  * @property {number}  calibrationProgress  0–1 while calibrating
  * @property {number|null} score            0–100 (100 = matches your calibrated posture); null if not present or not calibrated
  * @property {Issue[]} issues               issues detected right now (may be empty), worst first
- * @property {PostureMetrics} metrics       raw numbers for debugging and for Ossie
+ * @property {PostureMetrics} metrics       raw numbers for debugging and for Maizy
  */
 
 /**
@@ -115,7 +115,7 @@ export const ISSUE_IDS = Object.freeze(Object.keys(ISSUES));
 //   src/posture/index.js    Darren  analyze(frame) -> PostureState, startCalibration(ms = 3000) -> Promise<CalibrationResult>, resetCalibration(), setSensitivity(0–1)
 //   src/voice/index.js      Joseph  voiceCoach.update(state), voiceCoach.setMuted(bool), speakLine(lineId) -> Promise
 //   src/stretches/index.js  Joseph  STRETCHES, stretchesFor(issueId) -> Stretch[], startStretch(id), stopStretch(), onStretchEvent(cb) -> unsubscribe
-//   src/ossie/index.js      Shawn   ossie.mount(el), ossie.update(state), ossie.playStretch(stretchId), ossie.celebrate()
+//   src/maizy/index.js      Shawn   maizy.mount(el), maizy.update(state), maizy.playStretch(stretchId), maizy.stopStretch(), maizy.celebrate(), maizy.setVitality(0–1 | null)
 //   src/debug/fake-posture.js Shawn mountFakePosturePanel(el, onState)
 //   src/ui/index.js         Claude  ui.mount(el), ui.update(state)
 
