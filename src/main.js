@@ -9,6 +9,7 @@ import {
   systemPreferences,
   Tray,
 } from 'electron';
+import fs from 'node:fs';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
 import { TRAY_ICON_16, TRAY_ICON_32 } from './tray-icon.js';
@@ -19,10 +20,14 @@ if (started) {
 }
 
 // Load secrets from .env. Only the main process can see them.
-try {
-  process.loadEnvFile();
-} catch {
-  console.warn('No .env file found. Voice (tts) will not work until you add one.');
+// npm start uses the project's .env. The packaged app uses one in its data folder
+// (Mac: ~/Library/Application Support/stretchGoals/.env).
+const envFiles = [path.join(process.cwd(), '.env'), path.join(app.getPath('userData'), '.env')];
+const envFile = envFiles.find((file) => fs.existsSync(file));
+if (envFile) {
+  process.loadEnvFile(envFile);
+} else {
+  console.warn(`No .env file found. Voice (tts) will not work until you add one at ${envFiles[1]}`);
 }
 
 // Windows needs an app ID for notifications to show.
@@ -56,7 +61,8 @@ const createWindow = () => {
     );
   }
 
-  mainWindow.webContents.openDevTools();
+  // DevTools only while developing, not in the packaged app
+  if (!app.isPackaged) mainWindow.webContents.openDevTools();
 
   // Closing the window hides it; the app keeps running in the tray.
   mainWindow.on('close', (event) => {
