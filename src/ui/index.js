@@ -83,6 +83,8 @@ let externalCalibration = false; // true while a calibration someone else starte
 
 // The stretch that's running right now, or null
 let stretchRun = null;
+// The step last drawn on the stretch screen: { run, index }
+let shownStep = null;
 // The stretch the dashboard is suggesting
 let suggested = null;
 // The stretch clicked in the picker (waits for its Start button), or null
@@ -406,7 +408,7 @@ const TEMPLATE = `
           <p class="sg-tip-for" data-ref="tipFor"></p>
           <p class="sg-tip-how" data-ref="tipHow"></p>
           <div class="sg-tip-foot">
-            <button type="button" class="sg-btn sg-btn-primary" data-ref="tipStart">${ICON.play}Start stretch</button>
+            <button type="button" class="sg-btn sg-btn-primary" data-ref="tipStart">${ICON.play}<span data-ref="tipStartLabel">Start stretch</span></button>
             <span class="sg-note" data-ref="tipTime"></span>
           </div>
         </section>
@@ -869,6 +871,8 @@ function renderDashboard(state) {
 
   renderIssues(mode, issues, state.metrics?.severity);
   renderTip(worst);
+  // While a stretch runs, this button goes back to it (like the dock) instead of starting another
+  setText(refs.tipStartLabel, stretchRun ? "Back to stretch" : "Start stretch");
 }
 
 function makeIssueRow(id) {
@@ -947,8 +951,23 @@ function renderIssues(mode, issues, severities) {
   const key = order.join(",");
   if (key !== issueOrder) {
     issueOrder = key;
+    const tops = order.map((id) => issueRows[id].li.getBoundingClientRect().top);
     for (const id of order) refs.issueList.appendChild(issueRows[id].li);
+    slideRows(order, tops);
   }
+}
+
+/** Moved rows slide from where they were to their new place, so you can see which one went to the top. */
+function slideRows(order, tops) {
+  if (!refs.issueList.offsetParent || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+  const easing = getComputedStyle(root).getPropertyValue("--sg-ease-move").trim() || "ease-in-out";
+  order.forEach((id, i) => {
+    const row = issueRows[id];
+    row.slide?.cancel(); // a slide still running: start again from where the row is now
+    const dy = tops[i] - row.li.getBoundingClientRect().top;
+    if (Math.abs(dy) < 1) return;
+    row.slide = row.li.animate([{ transform: `translateY(${dy}px)` }, { transform: "none" }], { duration: 240, easing });
+  });
 }
 
 const NO_STRETCH_HOW = "Your health check rules these stretches out. A doctor or physio can suggest ones that suit you.";
@@ -1084,7 +1103,7 @@ function startStretch(stretch) {
   showScreen("stretch");
 }
 
-/** Dock button: start one, or go back to the one that's running. */
+/** Dock and dashboard buttons: start one, or go back to the one that's running. */
 function onDockStretchClick() {
   if (stretchRun) showScreen("stretch");
   else onStartStretchClick();
@@ -1175,6 +1194,13 @@ function renderStretch() {
   const steps = Array.isArray(stretch.steps) ? stretch.steps : [];
   setText(refs.stretchName, stretchName(stretch));
   setText(refs.stretchStep, stepText(steps[stepIndex]) || "Follow the steps with the voice.");
+  // A new step of the same stretch: its words rise in, so you notice the change while looking away
+  if (shownStep?.run === stretchRun && shownStep.index !== stepIndex) {
+    refs.stretchStep.classList.remove("sg-step-new");
+    void refs.stretchStep.offsetWidth; // restart the animation
+    refs.stretchStep.classList.add("sg-step-new");
+  }
+  shownStep = { run: stretchRun, index: stepIndex };
   const next = stepText(steps[stepIndex + 1]);
   setText(refs.stretchNext, steps.length ? (next ? `Up next: ${next}` : "Last step. Nearly done.") : "");
   setText(refs.stretchStepOf, steps.length ? `Step ${stepIndex + 1} of ${steps.length}` : "");
@@ -1366,7 +1392,7 @@ function mount(el, givenServices = {}) {
   refs.cameraOffBtn.addEventListener("click", onCameraClick);
   refs.calibBtn.addEventListener("click", onCalibrateClick);
   refs.skipBtn.addEventListener("click", () => showScreen("dashboard"));
-  refs.tipStart.addEventListener("click", onStartStretchClick);
+  refs.tipStart.addEventListener("click", onDockStretchClick); // start one, or go back to the one running
   // Picker: clicking a stretch only chooses it; its Start button begins the countdown
   refs.pickStart.addEventListener("click", () => {
     if (!suggested) renderTip(null);

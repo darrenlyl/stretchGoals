@@ -55,6 +55,7 @@
   --sg-edge: 28px; /* space between the edge of the content area and the cards */
   --sg-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --sg-ease-state: cubic-bezier(0.25, 1, 0.5, 1);
+  --sg-ease-move: cubic-bezier(0.65, 0, 0.35, 1); /* something already on screen moving to a new place */
 
   /* Old names, kept so nothing outside this file breaks */
   --sg-panel: var(--sg-surface-1);
@@ -1194,7 +1195,7 @@ body.sg-host {
   font-weight: 600;
 }
 .sg-issue-time {
-  min-width: 44px;
+  min-width: 9ch; /* "for 999 s": the Sustained pill beside it stays put as the seconds grow */
   white-space: nowrap;
   text-align: right;
   font-family: var(--sg-font-mono);
@@ -1278,6 +1279,16 @@ body.sg-host {
   font-weight: 550;
   line-height: 1.3;
   letter-spacing: -0.015em;
+}
+/* Added by ui.js when the step changes (not on each tick) */
+.sg-step-text.sg-step-new {
+  animation: sg-step-in 0.22s var(--sg-ease-out);
+}
+@keyframes sg-step-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
 }
 .sg-next {
   margin-top: 10px;
@@ -1695,8 +1706,10 @@ body.sg-host {
   .sg-step-text {
     font-size: 20px;
   }
+  /* The last column keeps one width (not auto), so every row's bar starts at the same place
+     and doesn't jump left when an issue becomes "Sustained" */
   .sg-issue {
-    grid-template-columns: minmax(0, 1fr) minmax(60px, 120px) auto;
+    grid-template-columns: minmax(0, 1fr) minmax(60px, 120px) 158px;
     gap: 12px;
   }
 }
