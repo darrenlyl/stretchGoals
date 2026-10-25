@@ -4,7 +4,7 @@
 //   C. The conversation: connect to the ElevenLabs agent and answer her tool calls.
 import { Conversation } from "https://cdn.jsdelivr.net/npm/@elevenlabs/client@1.27.0/+esm";
 import { ISSUES, ISSUE_IDS } from "../../shared/contracts.js";
-import { FALLBACK_STRETCHES, createFallbackStretches } from "./stretch-list.js";
+import * as stretches from "../../stretches/index.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -79,7 +79,7 @@ function coachRules(state) {
     lastWarnedAt[worst.id] = now;
     warnedIssue = worst.id;
     tellMaizy(
-      `[app] Sustained posture issue: ${worst.medical ?? worst.layman} (plain words: ${worst.layman.toLowerCase()}). ` +
+      `[app] Sustained posture issue: ${worst.layman.toLowerCase()}. ` +
         `Severity ${Math.round(worst.severity * 10)} out of 10, going on for ${worst.durationSec} seconds. Score is ${state.score}.`,
     );
     return;
@@ -112,9 +112,8 @@ setInterval(() => {
 }, 1000);
 
 // Stretches: the runner walks through the steps on a timer; we pass each step to Maizy to say out loud.
-const stretches = createFallbackStretches();
 stretches.onStretchEvent((e) => {
-  const stretch = FALLBACK_STRETCHES.find((s) => s.id === e.stretchId);
+  const stretch = stretches.STRETCHES.find((s) => s.id === e.stretchId);
   if (e.type === "start" || e.type === "step") {
     const step = stretch.steps[e.stepIndex];
     $("stretchInfo").textContent = `Stretch: ${stretch.name}, step ${e.stepIndex + 1} of ${stretch.steps.length}`;
@@ -147,19 +146,23 @@ const clientTools = {
     return JSON.stringify({
       calibrated: s.calibrated,
       score: s.score,
-      issues: s.issues.map((i) => ({ id: i.id, medical: i.medical, plain: i.layman, severity: i.severity, seconds: i.durationSec })),
+      issues: s.issues.map((i) => ({ id: i.id, plain: i.layman, severity: i.severity, seconds: i.durationSec })),
     });
   },
 
   get_stretches: ({ issue_id } = {}) => {
     log("tool", `get_stretches ${issue_id ?? ""}`);
     const list = issue_id ? stretches.stretchesFor(issue_id) : stretches.STRETCHES;
-    return JSON.stringify(list.map(({ id, name, how, helps }) => ({ id, name, how, helps })));
+    return JSON.stringify(
+      list.map(({ id, name, how, cue, reps, bothSides, cautionNote, helps, source }) => ({
+        id, name, how, cue, reps, bothSides, cautionNote, helps, source: source.name,
+      })),
+    );
   },
 
   start_stretch: ({ stretch_id }) => {
     log("tool", `start_stretch ${stretch_id}`);
-    const stretch = FALLBACK_STRETCHES.find((s) => s.id === stretch_id);
+    const stretch = stretches.STRETCHES.find((s) => s.id === stretch_id);
     if (!stretch) return JSON.stringify({ started: false, reason: "No stretch with that id. Use get_stretches." });
     stretching = true;
     stretches.startStretch(stretch_id);
