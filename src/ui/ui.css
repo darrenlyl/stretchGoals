@@ -741,8 +741,35 @@ body.sg-host {
 }
 .sg-app[data-screen="calibrate"] .sg-screen[data-for="calibrate"],
 .sg-app[data-screen="dashboard"] .sg-screen[data-for="dashboard"],
-.sg-app[data-screen="stretch"] .sg-screen[data-for="stretch"] {
+.sg-app[data-screen="stretch"] .sg-screen[data-for="stretch"],
+.sg-app[data-screen="stats"] .sg-screen[data-for="stats"] {
   display: contents;
+}
+
+/* Stats: one full-width page that scrolls (src/stats/stats.css styles what's inside).
+   Maizy steps aside. The camera is shrunk out of sight rather than hidden with display: none,
+   so the video keeps playing and posture is still counted while you look at your stats. */
+.sg-app[data-screen="stats"] .sg-grid {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  grid-template-areas: "stats";
+}
+.sg-app[data-screen="stats"] .sg-maizy-card {
+  display: none;
+}
+.sg-app[data-screen="stats"] .sg-camera {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.sg-stats {
+  grid-area: stats;
+  min-height: 0;
+  overflow: auto;
+  padding-bottom: var(--sg-gap);
+  animation: sg-enter 0.15s var(--sg-ease-out) both;
 }
 
 /* Screen change: the screen's own cards settle in with a short fade (camera and Maizy stay put).
