@@ -5,11 +5,24 @@ import { calibrate } from "./calibration.js";
 
 let baseline = null;
 let calib = null;
+let sensitivity = 0.5;
+
+export function setSensitivity(value){
+    sensitivity = value;
+}
 
 export function startCalibration(ms = 3000){
     return new Promise((resolve) => {
         calib = { frames: [], startTs: null, ms, resolve };
     });
+}
+
+export function resetCalibration(){
+    baseline = null;
+    if (calib){
+        calib.resolve({ ok: false, reason: "cancelled", message: "Calibration was cancelled."});
+        calib = null;
+    }
 }
 export function analyze(frame) {
   // --- Calibration in progress: collect frames, report progress ---
@@ -56,7 +69,7 @@ export function analyze(frame) {
     };
   }
 
-  const severity = computeSeverities(m, baseline);
+  const severity = computeSeverities(m, baseline, 1.5 - sensitivity);
   const score = computeScore(severity);
   const issues = [];
 
