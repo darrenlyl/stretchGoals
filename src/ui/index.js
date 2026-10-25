@@ -6,12 +6,17 @@
  *                            services = { posture, voice, stretches, camera }: each is that module's
  *                            exports (TEAM_GUIDE 3.4). All are optional; a missing one only makes its
  *                            buttons do less (stretches fall back to ./fallback-stretches.js).
+ *                            The UI also listens to camera.onPoseFrame itself: during a stretch,
+ *                            ./stretch-tracker.js uses the frames to count reps or seconds held.
  *   ui.update(state)         Pass the latest PostureState, ~10 times a second.
  *   ui.onPauseChange(cb)     cb(paused) runs when Pause/Resume is pressed in the UI. Returns an
  *                            unsubscribe function. THIS IS THE PAUSE SIGNAL: stop feeding frames while
  *                            paused, start again when it's false.
  *   ui.setPaused(bool)       For the tray's "pause"/"resume". Updates the UI and runs the callbacks.
  *   ui.isPaused()            true while paused.
+ *   ui.runningStretch()      { id, stepIndex, waiting } for the stretch on screen, or null. waiting = true
+ *                            while the UI holds back stretches.startStretch() until the camera sees the
+ *                            first rep (the timer and the voice start then).
  *   ui.showScreen(name)      "welcome" | "calibrate" | "dashboard" | "stretch". Tray "recalibrate" can
  *                            use showScreen("calibrate"). Going to "calibrate" stops a running stretch.
  *   ui.onCameraChange(cb)    cb(on) runs when the camera turns on or off (the top-bar Camera button
@@ -51,6 +56,7 @@
 
 import { ISSUES, ISSUE_IDS, emptyPostureState } from "../shared/contracts.js";
 import { FALLBACK_STRETCHES, createFallbackStretches } from "./fallback-stretches.js";
+import { createStretchTracker, repTarget } from "./stretch-tracker.js";
 
 // ─── Settings you might want to tweak ───────────────────────────────────────
 const SCORE_GOOD = 80; // score >= 80 is green
@@ -81,8 +87,13 @@ let wasCalibrating = false;
 let ownCalibration = false; // true while OUR Calibrate button's startCalibration() is running
 let externalCalibration = false; // true while a calibration someone else started is running
 
-// The stretch that's running right now, or null
+// The stretch that's running right now, or null. stretchRun.tracker watches the camera and
+// counts reps / seconds held (./stretch-tracker.js), or is null for stretches it can't watch.
 let stretchRun = null;
+// The last ~2 s of camera frames, so a new stretch knows how you sat before it started
+const recentFrames = [];
+let lastFrameAt = -Infinity; // performance.now() of the newest camera frame
+const FRESH_MS = 1500; // no frame for this long = we're not getting camera frames
 // The stretch the dashboard is suggesting
 let suggested = null;
 // The stretch clicked in the picker (waits for its Start button), or null
@@ -193,6 +204,13 @@ function stretchSeconds(s) {
   if (!Array.isArray(s?.steps)) return s?.seconds ?? null;
   const total = s.steps.reduce((sum, step) => sum + (Number(step?.seconds) || 0), 0);
   return total || null;
+}
+
+/** "6 reps" for a rep stretch (no timer), "About 40 s" for a timed one. */
+function howLong(stretch, seconds) {
+  const reps = repTarget(stretch);
+  if (reps) return `${reps} reps`;
+  return seconds ? `About ${seconds} s` : "";
 }
 
 /** The first stretch that helps this issue, or a general one when there's no issue. */
@@ -340,6 +358,11 @@ const TEMPLATE = `
         <video id="camera-video" autoplay muted playsinline></video>
         <canvas id="camera-overlay"></canvas>
         <figcaption class="sg-chip" data-ref="cameraChip" hidden></figcaption>
+        <!-- During a stretch: are you in position? (stretch-tracker.js) -->
+        <div class="sg-track" data-ref="track" data-state="out" hidden>
+          <span class="sg-track-meter" data-ref="trackMeter" aria-hidden="true"><span class="sg-track-fill" data-ref="trackFill"></span></span>
+          <span class="sg-track-text" data-ref="trackText"></span>
+        </div>
       </figure>
 
       <!-- Maizy slot (Shawn). Never re-created. -->
@@ -422,10 +445,11 @@ const TEMPLATE = `
           <ul class="sg-pick-list" data-ref="pickList"></ul>
         </section>
 
-        <section class="sg-card sg-side sg-stretch-live" aria-label="Time left in this step">
-          <p class="sg-label">This step</p>
+        <section class="sg-card sg-side sg-stretch-live" data-ref="stretchSide" aria-label="Time left in this step">
+          <p class="sg-label" data-ref="stretchLabel">This step</p>
           ${ring("stretchRing", "stretchValue")}
           <p class="sg-verdict" data-ref="stretchStepOf"></p>
+          <p class="sg-stretch-sub" data-ref="stretchSub" hidden></p>
         </section>
         <section class="sg-card sg-panel sg-guide sg-stretch-live" aria-labelledby="sg-guide-title">
           <div class="sg-guide-text">
@@ -435,7 +459,10 @@ const TEMPLATE = `
           </div>
           <div class="sg-guide-action">
             <p class="sg-safety">Move gently and stop if anything hurts. This isn't medical advice.</p>
-            <button type="button" class="sg-btn sg-btn-secondary" data-ref="stopBtn">Stop stretch</button>
+            <div class="sg-actions">
+              <button type="button" class="sg-btn sg-btn-secondary" data-ref="stopBtn">Stop stretch</button>
+              <button type="button" class="sg-btn sg-btn-text" data-ref="startTimerBtn" hidden>Start the timer now</button>
+            </div>
           </div>
         </section>
       </div>
@@ -523,6 +550,7 @@ function render() {
   if (screen === "calibrate") renderCalibration(lastState);
   if (screen === "dashboard") renderDashboard(lastState);
   if (screen === "stretch") renderStretch();
+  if (screen !== "stretch" || !stretchRun) show(refs.track, false); // the rep counter's line over the camera
 }
 
 function renderHeader() {
@@ -946,7 +974,7 @@ function renderTip(worstIssue) {
   setText(refs.tipFor, forText);
   setData(refs.tipFor, "chip", issueId ? "yes" : "no");
   setText(refs.tipHow, stretchHow(stretch));
-  setText(refs.tipTime, seconds ? `About ${seconds} s` : "");
+  setText(refs.tipTime, howLong(stretch, seconds));
   fitTipText(refs.tipHow);
   renderPickSide();
 }
@@ -970,7 +998,7 @@ function renderPickSide() {
   setText(refs.pickFor, forText);
   setData(refs.pickFor, "chip", forText.startsWith("For:") ? "yes" : "no");
   setText(refs.pickHow, stretchHow(stretch));
-  setText(refs.pickTime, seconds ? `About ${seconds} s` : "");
+  setText(refs.pickTime, howLong(stretch, seconds));
   fitTipText(refs.pickHow);
   // Tick the one shown in the card
   for (const button of refs.pickList.querySelectorAll(".sg-pick")) {
@@ -1018,9 +1046,98 @@ function startStretch(stretch) {
   if (!stretch?.id) return;
   picked = null;
   const firstSeconds = Number(stretch.steps?.[0]?.seconds) || 0;
-  stretchRun = { id: stretch.id, stretch, stepIndex: 0, secondsLeft: firstSeconds, stepTotal: firstSeconds };
+  stretchRun = newRun(stretch, 0, firstSeconds);
+  const canWatch = Boolean(stretchRun.tracker && cameraLive && !paused && performance.now() - lastFrameAt < FRESH_MS);
+
+  if (canWatch && stretchRun.tracker.kind === "reps") {
+    // Rep stretch (chin tucks, shoulder rolls...): no timer. It ends on your last rep
+    // (finishRepStretch) or when you press Stop. Joseph's timer isn't used, so the UI says
+    // the voice lines it would have said.
+    stretchRun.mode = "reps";
+    showScreen("stretch");
+    sayLine("stretch.intro");
+    return;
+  }
+  // Timed stretch: the timer waits until you're in position (beginTimer). Without the camera
+  // (or for a rep stretch when the camera is off) it starts now, like before.
+  stretchRun.waiting = canWatch;
   showScreen("stretch");
-  safeCall(stretches?.startStretch, stretch.id);
+  if (!stretchRun.waiting) safeCall(stretches?.startStretch, stretch.id);
+}
+
+/** Start Joseph's timer (and the voice) for a timed stretch that was waiting for you. */
+function beginTimer() {
+  if (!stretchRun?.waiting) return;
+  stretchRun.waiting = false;
+  safeCall(stretches?.startStretch, stretchRun.id);
+  render();
+}
+
+/** Last rep done: say so, show the tick for a moment, then back to the dashboard. */
+function finishRepStretch() {
+  const run = stretchRun;
+  if (!run || run.finishing) return;
+  run.finishing = true;
+  sayLine("stretch.done");
+  setTimeout(() => {
+    if (stretchRun !== run) return; // already stopped, or another stretch started
+    stretchRun = null;
+    if (screen === "stretch") showScreen("dashboard");
+    else render();
+  }, 2500);
+}
+
+/** Say a line from Joseph's lines.js (muting is handled by the voice module). */
+function sayLine(lineId) {
+  Promise.resolve(safeCall(services.voice?.speakLine, lineId)).catch((err) => console.warn("[ui] voice line failed:", err));
+}
+
+/** A running stretch, with a fresh tracker that learns "neutral" from the frames just before it. */
+function newRun(stretch, stepIndex, secondsLeft) {
+  const now = performance.now();
+  const before = recentFrames.filter((frame) => now - frame.timestamp < 2000);
+  let tracker = null;
+  try {
+    tracker = createStretchTracker(stretch, { before });
+  } catch (err) {
+    console.error("[ui] stretch tracker failed to start:", err);
+  }
+  return { id: stretch.id, stretch, stepIndex, secondsLeft, stepTotal: secondsLeft, tracker };
+}
+
+/**
+ * Every camera frame (straight from Jordan's camera.onPoseFrame). While a stretch runs, its
+ * tracker checks you're doing it. Paused means not watching, so nothing is counted then.
+ */
+function onPoseFrame(frame) {
+  if (!frame) return;
+  recentFrames.push(frame);
+  while (recentFrames.length > 20) recentFrames.shift();
+  lastFrameAt = performance.now();
+  if (paused || !stretchRun?.tracker) return;
+  try {
+    stretchRun.progress = stretchRun.tracker.update(frame, Math.max(0, stretchRun.stepIndex));
+  } catch (err) {
+    console.error("[ui] stretch tracker failed:", err);
+    stretchRun.tracker = null; // stop trying; the countdown still works
+    stretchRun.progress = null;
+    // Nothing can watch you now: fall back to the timer
+    if (stretchRun.mode === "reps") {
+      stretchRun.mode = null;
+      safeCall(stretches?.startStretch, stretchRun.id);
+    }
+    beginTimer();
+  }
+  // Timed stretch: first time you're in position, the timer starts
+  if (stretchRun?.waiting && stretchRun.progress?.inPosition) beginTimer();
+  // Rep stretch: last rep done
+  if (stretchRun?.mode === "reps" && stretchRun.progress?.done) finishRepStretch();
+  if (screen === "stretch") renderStretch();
+}
+
+/** Are we counting right now? Needs a tracker, fresh frames, the camera on and not paused. */
+function trackingLive() {
+  return Boolean(stretchRun?.tracker && stretchRun.progress && !paused && performance.now() - lastFrameAt < FRESH_MS);
 }
 
 /** Dock button: start one, or go back to the one that's running. */
@@ -1031,7 +1148,12 @@ function onDockStretchClick() {
 
 function stopRunningStretch() {
   if (!stretchRun) return;
+  const { mode, finishing } = stretchRun;
   stretchRun = null;
+  if (mode === "reps") {
+    if (!finishing) sayLine("stretch.stopped"); // no timer running, so no "end" event
+    return;
+  }
   safeCall(stretches?.stopStretch); // sends "end"
 }
 
@@ -1051,8 +1173,8 @@ function onStretchEvent(event) {
     return;
   }
   if (!stretchRun || stretchRun.id !== event.stretchId) {
-    const stretch = findStretch(event.stretchId);
-    stretchRun = { id: event.stretchId, stretch, stepIndex: -1, secondsLeft: 0, stepTotal: 0 };
+    // Started somewhere else (e.g. by voice)
+    stretchRun = newRun(findStretch(event.stretchId), -1, 0);
   }
   const stepIndex = Number(event.stepIndex) || 0;
   const secondsLeft = Math.max(0, Number(event.secondsLeft) || 0);
@@ -1090,8 +1212,9 @@ function buildPickList() {
         <span class="sg-pick-mark">${ICON.check}</span>
       </button>`;
     li.querySelector(".sg-pick-name").textContent = stretchName(stretch);
-    // Time first, so it's never the part cut short: "35 s · Neck too far forward"
-    li.querySelector(".sg-pick-meta").textContent = [seconds ? `${seconds} s` : "", helpsText || "Any time"].filter(Boolean).join(" · ");
+    // Length first, so it's never the part cut short: "6 reps · Neck too far forward" or "35 s · ..."
+    const reps = repTarget(stretch);
+    li.querySelector(".sg-pick-meta").textContent = [reps ? `${reps} reps` : seconds ? `${seconds} s` : "", helpsText || "Any time"].filter(Boolean).join(" · ");
     li.querySelector(".sg-pick").title = helpsText ? `Choose ${stretchName(stretch)}. Helps: ${helpsText.toLowerCase()}` : `Choose ${stretchName(stretch)}`;
     refs.pickList.appendChild(li);
   }
@@ -1102,17 +1225,95 @@ function renderStretch() {
     renderPicker();
     return;
   }
-  const { stretch, stepIndex, secondsLeft, stepTotal } = stretchRun;
+  const { stretch, stepIndex, secondsLeft, stepTotal, waiting, mode } = stretchRun;
   const steps = Array.isArray(stretch.steps) ? stretch.steps : [];
+  const live = trackingLive();
+  const p = stretchRun.progress;
   setText(refs.stretchName, stretchName(stretch));
+  show(refs.startTimerBtn, Boolean(waiting));
+
+  if (mode === "reps") {
+    // Rep stretch: no timer. The ring counts reps, and the stretch ends on the last one.
+    const target = p?.target ?? stretchRun.tracker?.progress().target ?? 0;
+    const count = p?.count ?? 0;
+    const done = Boolean(p?.done);
+    const holdSec = stretchRun.tracker?.holdSec ?? 0;
+    setText(refs.stretchStep, stretchHow(stretch));
+    setText(refs.stretchNext, `${holdSec >= 1 ? `Hold each one for ${holdSec} seconds, then relax. ` : ""}No timer: go at your own pace.`);
+    setText(refs.stretchLabel, "Reps");
+    setRingValue(refs.stretchValue, done ? "" : String(count));
+    setData(refs.stretchValue, "icon", done ? "check" : "");
+    setData(refs.stretchRing, "tone", done ? "good" : "accent");
+    setRing(refs.stretchRingBar, target ? count / target : 0);
+    setText(refs.stretchStepOf, done ? `All ${target} done` : `${count} of ${target} reps`);
+    // Only say something under the ring when we can't count right now
+    const why = paused ? "Paused, so we're not counting" : !live && !cameraLive ? "Turn the camera on to keep counting" : "";
+    setText(refs.stretchSub, why);
+    show(refs.stretchSub, why !== "");
+    refs.stretchSide.setAttribute("aria-label", "Reps done so far");
+    renderTrack(live, p);
+    return;
+  }
+
+  if (waiting) {
+    // Timed stretch, timer not started: it starts when you get into position
+    setText(refs.stretchStep, stretchHow(stretch) || stepText(steps[0]));
+    setText(refs.stretchNext, "The timer starts when you get into position.");
+    setText(refs.stretchLabel, "Ready");
+    setRingValue(refs.stretchValue, "");
+    setData(refs.stretchValue, "icon", "");
+    setData(refs.stretchRing, "tone", "accent");
+    setRing(refs.stretchRingBar, 0);
+    setText(refs.stretchStepOf, live ? "Get into position" : "Getting ready…");
+    setText(refs.stretchSub, "Timer starts when you do");
+    show(refs.stretchSub, live);
+    refs.stretchSide.setAttribute("aria-label", "Waiting for you to get into position");
+    renderTrack(live, p);
+    return;
+  }
+
+  // Timed stretch (or any stretch without the camera): count down the step's time
   setText(refs.stretchStep, stepText(steps[stepIndex]) || "Follow the steps with the voice.");
   const next = stepText(steps[stepIndex + 1]);
   setText(refs.stretchNext, steps.length ? (next ? `Up next: ${next}` : "Last step. Nearly done.") : "");
-  setText(refs.stretchStepOf, steps.length ? `Step ${stepIndex + 1} of ${steps.length}` : "");
+  setText(refs.stretchLabel, "This step");
   setRingValue(refs.stretchValue, secondsLeft ? `${secondsLeft}` : "");
+  setData(refs.stretchValue, "icon", "");
   setData(refs.stretchRing, "tone", "accent");
   setRing(refs.stretchRingBar, stepTotal ? secondsLeft / stepTotal : 0);
+  setText(refs.stretchStepOf, steps.length ? `Step ${stepIndex + 1} of ${steps.length}` : "");
+  show(refs.stretchSub, false);
+  refs.stretchSide.setAttribute("aria-label", "Time left in this step");
+  renderTrack(live, p);
 }
+
+/**
+ * Over your camera picture: are you in position, with a meter for how far into the move you are.
+ * Rep stretches show the tracker's own message ("Hold it…", "All 6 done"). Timed stretches only
+ * say whether you're in position. Only while we can see frames, and never on top of the camera's
+ * own chip ("Paused", "We can't see you").
+ */
+function renderTrack(live, p) {
+  const visible = live && screen === "stretch" && refs.cameraChip.hidden;
+  show(refs.track, visible);
+  if (!visible) return;
+  let state = p.status;
+  let text = p.message;
+  if (stretchRun?.mode !== "reps" && state !== "warmup" && state !== "unseen") {
+    state = p.inPosition ? "in" : "out";
+    text = p.inPosition ? "That's it. Hold it there." : p.hint;
+  }
+  setData(refs.track, "state", state);
+  setText(refs.trackText, text);
+  show(refs.trackMeter, state !== "done");
+  // 1.5 = the far end of the meter; the notch in ui.css at 2/3 marks "far enough" (level 1)
+  const fill = clamp01(p.level / 1.5).toFixed(2);
+  if (refs.trackFill.dataset.fill !== fill) {
+    refs.trackFill.dataset.fill = fill;
+    refs.trackFill.style.transform = `scaleX(${fill})`;
+  }
+}
+
 
 // ─── 5. Settings ────────────────────────────────────────────────────────────
 
@@ -1239,6 +1440,7 @@ function mount(el, givenServices = {}) {
     refs.pickStart.focus({ preventScroll: true }); // so Enter starts it
   });
   refs.stopBtn.addEventListener("click", onStopStretchClick);
+  refs.startTimerBtn.addEventListener("click", beginTimer);
   refs.issuesAction.addEventListener("click", () => {
     if (paused) setPaused(false);
     else showScreen("calibrate");
@@ -1281,6 +1483,8 @@ function mount(el, givenServices = {}) {
 
   // Stretch events (Joseph's module, or the fallback)
   safeCall(stretches.onStretchEvent, onStretchEvent);
+  // Camera frames, so a running stretch can count your reps
+  safeCall(services.camera?.onPoseFrame, onPoseFrame);
   buildPickList();
   // Refit the suggested-stretch text whenever its card changes size (window resize, screen change)
   const tipObserver = new ResizeObserver(() => {
@@ -1336,6 +1540,8 @@ export const ui = {
   setPaused,
   isPaused: () => paused,
   showScreen,
+  /** The running stretch: { id, stepIndex, waiting } (waiting = timer not started yet), or null. */
+  runningStretch: () => (stretchRun ? { id: stretchRun.id, stepIndex: stretchRun.stepIndex, waiting: Boolean(stretchRun.waiting) } : null),
   onCameraChange(cb) {
     cameraListeners.add(cb);
     return () => cameraListeners.delete(cb);

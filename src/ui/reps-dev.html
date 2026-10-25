@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Rep counter tuning · stretchGoals</title>
+    <!--
+      Tuning page for the rep counter (src/ui/stretch-tracker.js). Dev only, not part of the app.
+      Run `npx vite` from the repo root (after `npm install`), then open
+      http://localhost:5173/src/ui/reps-dev.html
+
+      1. Start the camera and pick a stretch.
+      2. Sit normally, press "Restart" (it learns your neutral from the last second), then do the move.
+      3. Watch the level bar: a real rep should pass the "in" line (1), and resting should fall
+         below the "out" line (0.6). If not, change the numbers under "Thresholds", then copy them
+         into TUNING in stretch-tracker.js.
+      "Record 20 s" saves the landmarks (numbers only, never video) so you can replay them:
+         node src/ui/try-tracker.mjs <stretch_id> <file.json>
+    -->
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #15171c;
+        --panel: #1e2128;
+        --line: #343944;
+        --text: #eef0f4;
+        --muted: #a3a9b6;
+        --mint: #6ee7b7;
+        --amber: #fbbf24;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 16px;
+        background: var(--bg);
+        color: var(--text);
+        font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+      h1 {
+        margin: 0 0 12px;
+        font-size: 18px;
+      }
+      .wrap {
+        display: grid;
+        grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+        gap: 16px;
+        align-items: start;
+      }
+      @media (max-width: 860px) {
+        .wrap {
+          grid-template-columns: 1fr;
+        }
+      }
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 14px;
+      }
+      .cam {
+        position: relative;
+        aspect-ratio: 4 / 3;
+        overflow: hidden;
+        padding: 0;
+        background: #000;
+      }
+      .cam video,
+      .cam canvas {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transform: scaleX(-1); /* mirror, like the app */
+      }
+      .cam-msg {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-content: center;
+        gap: 10px;
+        justify-items: center;
+        color: var(--muted);
+        text-align: center;
+        padding: 20px;
+      }
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 12px;
+        margin-bottom: 10px;
+      }
+      button,
+      select,
+      input {
+        font: inherit;
+        color: inherit;
+        background: #2a2e37;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 5px 10px;
+      }
+      button {
+        cursor: pointer;
+      }
+      button.primary {
+        background: var(--mint);
+        color: #0b2a1f;
+        border-color: transparent;
+        font-weight: 600;
+      }
+      input[type="number"] {
+        width: 80px;
+      }
+      .big {
+        font-size: 28px;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+      }
+      .status {
+        display: inline-block;
+        padding: 2px 10px;
+        border-radius: 999px;
+        background: #2a2e37;
+        font-weight: 600;
+      }
+      .status[data-state="in"],
+      .status[data-state="done"] {
+        background: #14532d;
+        color: var(--mint);
+      }
+      .status[data-state="unseen"] {
+        background: #4a3410;
+        color: var(--amber);
+      }
+      /* Level bar from -0.5 to 2. The lines mark EXIT (0.6) and ENTER (1). */
+      .meter {
+        position: relative;
+        height: 22px;
+        margin: 10px 0 4px;
+        border-radius: 6px;
+        background: #2a2e37;
+        overflow: hidden;
+      }
+      .meter-fill {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 20%;
+        background: var(--muted);
+      }
+      .meter-fill.in {
+        background: var(--mint);
+      }
+      .meter-mark {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #fff;
+        opacity: 0.7;
+      }
+      .meter-labels {
+        position: relative;
+        height: 16px;
+        font-size: 11px;
+        color: var(--muted);
+      }
+      .meter-labels span {
+        position: absolute;
+        transform: translateX(-50%);
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-family: ui-monospace, Menlo, Consolas, monospace;
+        font-size: 12px;
+      }
+      th,
+      td {
+        padding: 3px 6px;
+        text-align: right;
+        border-bottom: 1px solid var(--line);
+      }
+      th:first-child,
+      td:first-child {
+        text-align: left;
+      }
+      th {
+        color: var(--muted);
+        font-weight: 500;
+      }
+      td.hot {
+        color: var(--mint);
+      }
+      .muted {
+        color: var(--muted);
+      }
+      pre {
+        margin: 6px 0 0;
+        padding: 8px;
+        background: #111317;
+        border-radius: 8px;
+        overflow-x: auto;
+        font-size: 12px;
+      }
+      h2 {
+        margin: 14px 0 6px;
+        font-size: 13px;
+        color: var(--muted);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Rep counter tuning</h1>
+    <div class="wrap">
+      <div>
+        <div class="panel cam">
+          <video id="video" autoplay muted playsinline></video>
+          <canvas id="overlay"></canvas>
+          <div class="cam-msg" id="cam-msg">
+            <span id="cam-text">Your video stays on this laptop. Only landmark numbers are used.</span>
+            <button class="primary" id="start">Start camera</button>
+          </div>
+        </div>
+        <p class="muted">The picture is mirrored like a mirror. "Right" and "left" always mean <b>your</b> right and left.</p>
+      </div>
+
+      <div class="panel">
+        <div class="row">
+          <label>Stretch <select id="stretch"></select></label>
+          <label id="side-wrap">Side <select id="side"><option value="0">right (step 1)</option><option value="1">left (step 2)</option></select></label>
+          <button id="restart" title="Learn neutral from the last second, and zero the counts">Restart</button>
+        </div>
+
+        <div class="row">
+          <span class="status" id="status" data-state="out">–</span>
+          <span id="message" class="muted"></span>
+        </div>
+        <div class="row">
+          <span class="big" id="count">–</span>
+          <span class="muted" id="sides"></span>
+        </div>
+
+        <div class="meter" id="meter">
+          <div class="meter-fill" id="fill"></div>
+          <div class="meter-mark" style="left: calc(44% - 1px)"></div>
+          <div class="meter-mark" style="left: calc(60% - 1px)"></div>
+        </div>
+        <div class="meter-labels">
+          <span style="left: 20%">0 neutral</span>
+          <span style="left: 44%">0.6 out</span>
+          <span style="left: 60%">1 in</span>
+          <span style="left: 92%">level <b id="level">–</b></span>
+        </div>
+
+        <h2>Thresholds (change them live)</h2>
+        <div class="row" id="tuning"></div>
+        <pre id="tuning-out"></pre>
+
+        <h2>Measurements</h2>
+        <table>
+          <thead>
+            <tr><th>what</th><th>neutral</th><th>now</th><th>change</th></tr>
+          </thead>
+          <tbody id="table"></tbody>
+        </table>
+
+        <h2>Record</h2>
+        <div class="row">
+          <button id="record">Record 20 s</button>
+          <span class="muted" id="record-status">Saves a .json of landmark numbers for <code>node src/ui/try-tracker.mjs</code></span>
+        </div>
+      </div>
+    </div>
+
+    <script type="module">
+      import * as camera from "../camera/index.js";
+      import { STRETCHES } from "../stretches/index.js";
+      import { TUNING, createStretchTracker } from "./stretch-tracker.js";
+
+      const $ = (id) => document.getElementById(id);
+      // A copy we can change live: the tracker reads these numbers on every frame
+      const tuning = JSON.parse(JSON.stringify(TUNING));
+      const recent = [];
+      let tracker = null;
+      let stretch = null;
+      let recording = null; // { frames, until }
+
+      // Stretches the tracker knows
+      for (const s of STRETCHES) {
+        if (!TUNING[s.id]) continue;
+        const option = document.createElement("option");
+        option.value = s.id;
+        option.textContent = s.name;
+        $("stretch").appendChild(option);
+      }
+
+      function restart() {
+        stretch = STRETCHES.find((s) => s.id === $("stretch").value);
+        tracker = createStretchTracker(stretch, { before: recent.slice(-15), tuning });
+        $("side-wrap").hidden = tracker.progress().sides.length < 2;
+        showTuning();
+      }
+
+      function showTuning() {
+        const t = tuning[stretch.id];
+        $("tuning").innerHTML = "";
+        for (const key of Object.keys(t)) {
+          const label = document.createElement("label");
+          label.textContent = `${key} `;
+          const input = document.createElement("input");
+          input.type = "number";
+          input.step = key === "tilt" ? "1" : key === "holdSec" ? "0.5" : "0.005";
+          input.value = t[key];
+          input.addEventListener("input", () => {
+            if (input.value !== "" && Number.isFinite(Number(input.value))) t[key] = Number(input.value);
+            $("tuning-out").textContent = `${stretch.id}: ${JSON.stringify(t).replace(/"(\w+)":/g, "$1: ").replace(/,/g, ", ")},`;
+          });
+          label.appendChild(input);
+          $("tuning").appendChild(label);
+        }
+        $("tuning-out").textContent = `${stretch.id}: ${JSON.stringify(t).replace(/"(\w+)":/g, "$1: ").replace(/,/g, ", ")},`;
+      }
+
+      $("stretch").addEventListener("change", restart);
+      $("restart").addEventListener("click", restart);
+      restart();
+
+      $("start").addEventListener("click", async () => {
+        $("start").disabled = true;
+        $("cam-text").textContent = "Starting the camera and loading the pose model…";
+        try {
+          await camera.startCamera($("video"), $("overlay"));
+          $("cam-msg").hidden = true;
+        } catch (err) {
+          console.error(err);
+          $("cam-text").textContent = camera.describeCameraError(err);
+          $("start").disabled = false;
+        }
+      });
+
+      $("record").addEventListener("click", () => {
+        recording = { frames: [], until: performance.now() + 20000 };
+        $("record").disabled = true;
+      });
+
+      // ?fake = no camera: the fake person from fake-moves.js does reps (in 2.5 s, out 1.5 s)
+      if (new URLSearchParams(location.search).has("fake")) {
+        const { fakeFrame } = await import("./fake-moves.js");
+        $("cam-text").textContent = "Fake person (?fake). No camera.";
+        $("start").hidden = true;
+        setInterval(() => {
+          const now = performance.now();
+          const t = (now / 1000) % 4;
+          const amount = t < 0.5 ? t / 0.5 : t < 3 ? 1 : t < 3.5 ? 1 - (t - 3) / 0.5 : 0;
+          onFrame(fakeFrame({ stretchId: stretch.id, amount, side: $("side").value === "1" ? "left" : "right", timestamp: now }));
+        }, 100);
+      } else {
+        camera.onPoseFrame(onFrame);
+      }
+
+      function onFrame(frame) {
+        recent.push(frame);
+        while (recent.length > 30) recent.shift();
+        if (recording) recordFrame(frame);
+        if (!tracker) return;
+        const p = tracker.update(frame, Number($("side").value));
+        show(p);
+      }
+
+      function recordFrame(frame) {
+        recording.frames.push(frame);
+        const left = Math.ceil((recording.until - performance.now()) / 1000);
+        $("record-status").textContent = `Recording… ${Math.max(0, left)} s`;
+        if (left > 0) return;
+        const blob = new Blob([JSON.stringify(recording.frames)], { type: "application/json" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `${stretch.id}-${new Date().toISOString().slice(11, 19).replace(/:/g, "")}.json`;
+        link.click();
+        $("record-status").textContent = `Saved ${recording.frames.length} frames as ${link.download}`;
+        $("record").disabled = false;
+        recording = null;
+      }
+
+      // Level -0.5 … 2 maps to 0 … 100% of the bar
+      const pos = (level) => Math.min(100, Math.max(0, ((level + 0.5) / 2.5) * 100));
+
+      function show(p) {
+        $("status").textContent = p.status;
+        $("status").dataset.state = p.status;
+        $("message").textContent = p.message;
+        const unit = p.kind === "hold" ? "s" : "reps";
+        $("count").textContent = `${p.count} / ${p.target} ${unit}`;
+        $("sides").textContent = p.sides.length > 1 ? p.sides.map((s) => `${s.side} ${s.count}/${s.target}`).join("  ·  ") : "";
+
+        // The raw level (not clamped like p.level), straight from the tracker's side state
+        const level = rawLevel(p);
+        $("level").textContent = level == null ? "–" : level.toFixed(2);
+        const zero = pos(0);
+        const at = level == null ? zero : pos(level);
+        $("fill").style.left = `${Math.min(zero, at)}%`;
+        $("fill").style.width = `${Math.abs(at - zero)}%`;
+        $("fill").classList.toggle("in", p.status === "in");
+
+        const ref = tracker.neutral();
+        const now = tracker.latest();
+        if (!ref || !now) return;
+        // Shown the way the tracker compares them: tilt in degrees; nose and pitch as plain
+        // differences (they sit near 0, so % would be huge); sizes and neck as % change
+        const PLAIN = ["noseH", "noseX", "pitchEars"];
+        const rows = Object.keys(now).map((key) => {
+          const a = ref[key];
+          const b = now[key];
+          const tilt = key.startsWith("tilt");
+          let change = null;
+          let hot = false;
+          if (a != null && b != null) {
+            if (tilt) [change, hot] = [`${(b - a).toFixed(1)}°`, Math.abs(b - a) >= 5];
+            else if (PLAIN.includes(key)) [change, hot] = [`${b - a >= 0 ? "+" : ""}${(b - a).toFixed(3)}`, Math.abs(b - a) >= 0.04];
+            else [change, hot] = [`${(((b - a) / Math.abs(a)) * 100).toFixed(1)}%`, Math.abs((b - a) / a) >= 0.025];
+          }
+          const fmt = (v) => (v == null ? "–" : tilt ? v.toFixed(1) : v.toFixed(3));
+          return `<tr><td>${key}</td><td>${fmt(a)}</td><td>${fmt(b)}</td><td class="${hot ? "hot" : ""}">${change ?? "–"}</td></tr>`;
+        });
+        $("table").innerHTML = rows.join("");
+      }
+
+      // p.level is clamped to 0–1.5 for the app's meter; here we want to see negatives too
+      function rawLevel(p) {
+        if (p.status === "warmup" || p.status === "unseen") return null;
+        return p.rawLevel ?? p.level;
+      }
+    </script>
+  </body>
+</html>

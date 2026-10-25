@@ -120,6 +120,7 @@
           <option>welcome</option>
           <option>calibrate</option>
           <option>dashboard</option>
+          <option>stretch</option>
         </select>
         <a id="bare-link" href="?bare">Mount without services</a>
       </div>
@@ -171,6 +172,24 @@
       </div>
 
       <div class="dev-group">
+        <b>Fake person (rep counting)</b>
+        <div class="dev-row">
+          <label title="How far into the running stretch's move the fake person is. 1 = a normal rep">move <input type="range" id="move" min="0" max="1.5" step="0.05" value="0" /> <output id="move-out">0</output></label>
+          <label><input type="checkbox" id="auto-reps" /> does it by itself</label>
+        </div>
+        <div class="dev-row">
+          <label>side
+            <select id="fake-side">
+              <option value="">follow the step</option>
+              <option>right</option>
+              <option>left</option>
+            </select>
+          </label>
+          <label><input type="checkbox" id="in-view" checked /> in view</label>
+        </div>
+      </div>
+
+      <div class="dev-group">
         <b>Calls into fake modules</b>
         <div id="dev-log"></div>
       </div>
@@ -181,6 +200,7 @@
     <script type="module">
       import { ui } from "./index.js";
       import { createFallbackStretches } from "./fallback-stretches.js";
+      import { fakeFrame } from "./fake-moves.js";
       import { ISSUES, ISSUE_IDS, emptyPostureState } from "../shared/contracts.js";
 
       const $ = (id) => document.getElementById(id);
@@ -263,9 +283,11 @@
           canvas.width = video.videoWidth || W;
           canvas.height = video.videoHeight || H;
           drawOverlay(canvas);
+          startPoseLoop();
         },
         stopCamera() {
           log("camera.stopCamera()");
+          clearInterval(poseTimer);
           const video = document.querySelector("#camera-video");
           video?.srcObject?.getTracks().forEach((t) => t.stop());
           if (video) video.srcObject = null;
@@ -273,7 +295,42 @@
         setOverlayVisible(v) {
           log(`camera.setOverlayVisible(${v})`);
         },
+        onPoseFrame(cb) {
+          poseListeners.add(cb);
+          return () => poseListeners.delete(cb);
+        },
       };
+
+      // ── Fake person: PoseFrames 10 times a second while the camera is on ──
+      // They sit still until a stretch starts, then do its move as far as the "move"
+      // slider says (or by themselves: in for 2.5 s, out for 1.5 s, over and over).
+      const poseListeners = new Set();
+      let poseTimer = null;
+      let running = { id: "", step: 0 }; // the stretch the fake person is doing, from stretch events
+
+      function fakeAmount(now) {
+        if (!$("auto-reps").checked) return Number($("move").value);
+        const t = (now / 1000) % 4;
+        if (t < 0.5) return t / 0.5;
+        if (t < 3) return 1;
+        if (t < 3.5) return 1 - (t - 3) / 0.5;
+        return 0;
+      }
+
+      function startPoseLoop() {
+        clearInterval(poseTimer);
+        poseTimer = setInterval(() => {
+          const now = performance.now();
+          // The UI knows the stretch even before its timer starts (it waits for the first rep)
+          const run = ui.runningStretch?.() ?? running;
+          const id = run?.id ?? "";
+          const side = $("fake-side").value || ((run?.stepIndex ?? 0) >= 1 ? "left" : "right");
+          const frame = $("in-view").checked
+            ? fakeFrame({ stretchId: id, amount: id ? fakeAmount(now) : 0, side, timestamp: now })
+            : { timestamp: now, width: W, height: H, landmarks: null };
+          poseListeners.forEach((cb) => cb(frame));
+        }, 100);
+      }
 
       // ── Fake posture ────────────────────────────────────────────────────
       // startCalibration animates calibrationProgress over `ms` by feeding states.
@@ -336,6 +393,7 @@
       };
       base.onStretchEvent((e) => {
         if (e.type !== "tick") log(`stretch event: ${e.type} step ${e.stepIndex}, ${e.secondsLeft}s`);
+        running = e.type === "end" ? { id: "", step: 0 } : { id: e.stretchId, step: e.stepIndex };
       });
 
       // ── Mount ───────────────────────────────────────────────────────────
@@ -370,6 +428,7 @@
         $("issue-sliders").appendChild(label);
       }
       $("score").addEventListener("input", () => ($("score-out").textContent = $("score").value));
+      $("move").addEventListener("input", () => ($("move-out").textContent = $("move").value));
 
       function buildState() {
         const now = performance.now();
