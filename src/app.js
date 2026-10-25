@@ -7,6 +7,7 @@ import * as camera from './camera/index.js';
 import * as posture from './posture/index.js';
 import * as voice from './voice/index.js';
 import * as stretches from './stretches/index.js';
+import * as stats from './stats/index.js';
 import { ui } from './ui/index.js';
 import { emptyPostureState } from './shared/contracts.js';
 import { maizy, createMaizy } from './maizy/index.js';
@@ -101,6 +102,10 @@ maizy.mount(document.querySelector('#maizy'));
 const miniMaizy = createMaizy();
 const dockSpot = document.querySelector('#maizy-mini');
 if (dockSpot) miniMaizy.mount(dockSpot);
+// The Stats screen: today, the stretch streak and the last 7 days (src/stats)
+stats.mountStatsPage(document.querySelector('#stats-page'));
+// Finished stretches count towards today's total and the streak
+stretches.onStretchEvent((event) => stats.recordStretchEvent(event));
 
 // Every PostureState goes to everyone who reacts to posture.
 function handleState(state) {
@@ -116,7 +121,9 @@ function handleState(state) {
 // Real pipeline: ~10 PoseFrames a second from the camera, judged by the posture brain.
 camera.onPoseFrame((frame) => {
   if (paused || useFake) return;
-  handleState(worstFirst(posture.analyze(frame)));
+  const state = worstFirst(posture.analyze(frame));
+  stats.recordPosture(state); // here, not in handleState, so the fake panel never ends up in your stats
+  handleState(state);
 });
 
 // Camera turned off (the top-bar Camera switch): no more frames, so clear the last posture.

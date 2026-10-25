@@ -1,0 +1,196 @@
+/* Stats page styles. Every class starts with "st-".
+   Colours, fonts and spacing come from the UI's --sg-* tokens (src/ui/ui.css), so the page
+   follows the app's light and dark themes. The second value in each var() is only used
+   when the page is shown outside the app. */
+
+.st-page {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: var(--sg-gap, 16px);
+  color: var(--sg-fg, #1d2330);
+  font-family: var(--sg-font, system-ui, sans-serif);
+}
+
+.st-card {
+  /* same look as the UI's .sg-card: a soft shadow, no border */
+  background: var(--sg-surface-1, #fff);
+  border-radius: var(--sg-radius, 16px);
+  box-shadow: var(--sg-shadow-1, 0 1px 3px rgb(0 0 0 / 0.1));
+  padding: var(--sg-pad, 20px);
+  min-width: 0;
+}
+
+.st-week {
+  grid-column: 1 / -1; /* the chart spans the full width */
+}
+
+.st-title {
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.st-label {
+  margin: 0 0 4px;
+  color: var(--sg-fg-muted, #5b6474);
+  font-size: 12px;
+}
+
+.st-note {
+  margin: 12px 0 0;
+  color: var(--sg-fg-subtle, #6b7384);
+  font-size: 12px;
+}
+
+/* ── Today ───────────────────────────────────────────── */
+
+.st-tiles {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.st-tile {
+  background: var(--sg-surface-2, #f1f3f6);
+  border-radius: var(--sg-radius-sm, 10px);
+  padding: 12px;
+}
+
+.st-big {
+  margin: 0;
+  font-family: var(--sg-font-display, system-ui, sans-serif);
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Streak ──────────────────────────────────────────── */
+
+.st-streak-number {
+  margin: 0;
+  font-family: var(--sg-font-display, system-ui, sans-serif);
+  font-size: 44px;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--sg-vital, #1f7a64);
+}
+
+.st-streak-unit {
+  font-size: 18px;
+  color: var(--sg-fg-muted, #5b6474);
+}
+
+.st-streak-message {
+  margin: 8px 0 0;
+}
+
+/* ── Last 7 days ─────────────────────────────────────── */
+
+.st-week-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.st-week-summary {
+  margin: 0;
+  font-weight: 600;
+}
+
+.st-delta {
+  margin-left: 6px;
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.st-bars {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 10px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.st-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.st-bar-value {
+  min-height: 1.2em;
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The grey column the coloured bar grows inside; its height is the 0–100 scale */
+.st-bar-track {
+  position: relative;
+  width: 100%;
+  max-width: 44px;
+  height: 140px;
+  background: var(--sg-surface-2, #f1f3f6);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.st-bar-fill {
+  position: absolute;
+  inset: auto 0 0 0; /* stick to the bottom */
+  border-radius: 8px;
+  transition: height 0.4s var(--sg-ease-out, ease-out);
+}
+
+.st-bar-label {
+  color: var(--sg-fg-muted, #5b6474);
+  font-size: 12px;
+}
+
+.st-bar-today .st-bar-label {
+  color: var(--sg-fg, #1d2330);
+  font-weight: 600;
+}
+
+/* ── Score colours (same meaning as the UI: green good, amber ok, coral bad) ── */
+
+.st-big[data-tone='good'],
+.st-delta[data-tone='good'] {
+  color: var(--sg-vital, #1f7a64);
+}
+
+.st-big[data-tone='ok'] {
+  color: var(--sg-warn, #8a5a00);
+}
+
+.st-big[data-tone='bad'],
+.st-delta[data-tone='bad'] {
+  color: var(--sg-danger, #b3261e);
+}
+
+.st-bar-fill[data-tone='good'] {
+  background: var(--sg-vital, #1f7a64);
+}
+
+.st-bar-fill[data-tone='ok'] {
+  background: var(--sg-warn, #c98a00);
+}
+
+.st-bar-fill[data-tone='bad'] {
+  background: var(--sg-danger, #b3261e);
+}
+
+/* Narrow windows: stack the cards and use two columns of tiles */
+@media (max-width: 720px) {
+  .st-page {
+    grid-template-columns: 1fr;
+  }
+
+  .st-tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

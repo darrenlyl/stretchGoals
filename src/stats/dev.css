@@ -1,0 +1,65 @@
+/* Dev page only. Inside the app, the UI (src/ui/ui.css) provides these --sg-* tokens;
+   here a few of them are copied so the stats page looks the same in both themes. */
+
+body {
+  margin: 0;
+}
+
+.st-dev {
+  --sg-bg: oklch(0.975 0.004 250);
+  --sg-surface-1: oklch(0.995 0.002 250);
+  --sg-surface-2: oklch(0.955 0.006 250);
+  --sg-line: oklch(0.885 0.01 250);
+  --sg-fg: oklch(0.22 0.02 255);
+  --sg-fg-muted: oklch(0.45 0.02 255);
+  --sg-fg-subtle: oklch(0.53 0.018 255);
+  --sg-vital: oklch(0.47 0.115 170);
+  --sg-warn: oklch(0.51 0.13 65);
+  --sg-danger: oklch(0.52 0.19 25);
+  --sg-shadow-1:
+    0 1px 2px oklch(0.3 0.03 255 / 0.06), 0 2px 8px oklch(0.3 0.03 255 / 0.05);
+
+  min-height: 100vh;
+  padding: 24px;
+  box-sizing: border-box;
+  background: var(--sg-bg);
+  color: var(--sg-fg);
+  font-family: system-ui, sans-serif;
+}
+
+.st-dev[data-theme='dark'] {
+  --sg-shadow-1: 0 1px 2px oklch(0 0 0 / 0.3), 0 2px 8px oklch(0 0 0 / 0.2);
+  --sg-bg: oklch(0.165 0.012 250);
+  --sg-surface-1: oklch(0.205 0.014 250);
+  --sg-surface-2: oklch(0.245 0.016 250);
+  --sg-line: oklch(0.32 0.018 250);
+  --sg-fg: oklch(0.96 0.006 250);
+  --sg-fg-muted: oklch(0.75 0.015 250);
+  --sg-fg-subtle: oklch(0.66 0.016 250);
+  --sg-vital: oklch(0.84 0.15 165);
+  --sg-warn: oklch(0.83 0.14 75);
+  --sg-danger: oklch(0.73 0.16 25);
+}
+
+.st-dev h1 {
+  margin: 0 0 12px;
+  font-size: 20px;
+}
+
+.st-dev-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.st-dev-controls button[aria-pressed='true'] {
+  font-weight: 700;
+}
+
+.st-dev-status {
+  min-height: 1.5em;
+  margin: 0 0 12px;
+  color: var(--sg-fg-muted);
+}

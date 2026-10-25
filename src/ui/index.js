@@ -12,7 +12,7 @@
  *                            paused, start again when it's false.
  *   ui.setPaused(bool)       For the tray's "pause"/"resume". Updates the UI and runs the callbacks.
  *   ui.isPaused()            true while paused.
- *   ui.showScreen(name)      "welcome" | "calibrate" | "dashboard" | "stretch". Tray "recalibrate" can
+ *   ui.showScreen(name)      "welcome" | "calibrate" | "dashboard" | "stretch" | "stats". Tray "recalibrate" can
  *                            use showScreen("calibrate"). Going to "calibrate" stops a running stretch.
  *   ui.onCameraChange(cb)    cb(on) runs when the camera turns on or off (the top-bar Camera button
  *                            calls camera.stopCamera() / startCamera()). Returns an unsubscribe function.
@@ -22,6 +22,7 @@
  *       Both are mirrored by ui.css (scaleX(-1)) and cropped the same way (object-fit: cover), so
  *       keep canvas.width/height = video.videoWidth/videoHeight and don't mirror them again.
  *   <div id="maizy">                                          Shawn: maizy.mount(el).
+ *   <div id="stats-page">                                     stats.mountStatsPage(el) (src/stats).
  *
  * ─── Wiring in src/app.js (Shawn) ───────────────────────────────────────────
  *   import * as camera from "./camera/index.js";
@@ -57,7 +58,7 @@ const SCORE_GOOD = 80; // score >= 80 is green
 const SCORE_OK = 50; //   score >= 50 is yellow, below that is red
 const DEFAULT_SENSITIVITY = 0.5;
 const CALIBRATION_MS = 3000;
-const SCREENS = ["welcome", "calibrate", "dashboard", "stretch"];
+const SCREENS = ["welcome", "calibrate", "dashboard", "stretch", "stats"];
 const STORAGE_KEY = "stretchGoals.ui.settings";
 
 // ─── Everything the UI remembers ────────────────────────────────────────────
@@ -220,6 +221,7 @@ const ICON = {
   pulse: svg(`<path d="M3 12h4l2.5-6 4 12 2.5-6H21"/>`),
   target: svg(`<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/>`),
   stretch: svg(`<circle cx="12" cy="4.5" r="2"/><path d="M5 8.5l7 1.5 7-1.5M12 10v5l-3.5 6M12 15l3.5 6"/>`),
+  chart: svg(`<path d="M3.5 20.5h17M6.5 20.5v-6M12 20.5v-12M17.5 20.5v-8.5"/>`),
   gear: svg(`<circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7"/>`),
   sun: svg(`<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/>`),
   moon: svg(`<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>`),
@@ -241,6 +243,7 @@ const SCREEN_TEXT = {
   dashboard: ["Your posture", "Live from your camera. Maizy mirrors how you sit."],
   stretch: ["Stretch break", "Move gently and stop if anything hurts."],
   stretchPick: ["Stretches", "Pick one. Each takes about half a minute, and the coach talks you through it."],
+  stats: ["Your stats", "Today's posture, your stretch streak and the last 7 days."],
 };
 
 function ring(ref, valueRef) {
@@ -265,6 +268,7 @@ const TEMPLATE = `
       <button type="button" class="sg-nav" data-nav="dashboard" title="Dashboard">${ICON.pulse}<span class="sg-nav-label">Dashboard</span></button>
       <button type="button" class="sg-nav" data-nav="calibrate" title="Calibrate">${ICON.target}<span class="sg-nav-label">Calibrate</span></button>
       <button type="button" class="sg-nav" data-nav="stretch" title="Stretches">${ICON.stretch}<span class="sg-nav-label">Stretches</span><span class="sg-nav-live" data-ref="stretchLive" hidden>Live</span></button>
+      <button type="button" class="sg-nav" data-nav="stats" title="Stats">${ICON.chart}<span class="sg-nav-label">Stats</span></button>
       <div class="sg-rail-sep" role="separator"></div>
       <button type="button" class="sg-nav" data-ref="settingsBtn" aria-haspopup="dialog" title="Settings">${ICON.gear}<span class="sg-nav-label">Settings</span></button>
     </div>
@@ -438,6 +442,11 @@ const TEMPLATE = `
             <button type="button" class="sg-btn sg-btn-secondary" data-ref="stopBtn">Stop stretch</button>
           </div>
         </section>
+      </div>
+
+      <!-- 5. Stats. src/stats builds the page inside #stats-page (stats.mountStatsPage). -->
+      <div class="sg-screen" data-for="stats">
+        <div class="sg-stats" id="stats-page"></div>
       </div>
     </div>
   </main>

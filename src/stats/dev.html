@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Stats dev page</title>
+    <link rel="stylesheet" href="./dev.css" />
+  </head>
+  <body>
+    <!-- data-theme switches the fake --sg-* tokens in dev.css, like the app's light/dark themes -->
+    <div class="st-dev" data-theme="light">
+      <h1>Stats dev page</h1>
+
+      <!-- which numbers the page shows -->
+      <div class="st-dev-controls">
+        <span>Show:</span>
+        <button type="button" data-source="fakeWeeks">Fake: two weeks</button>
+        <button type="button" data-source="fakeFirstDay">
+          Fake: first day
+        </button>
+        <button type="button" data-source="empty">Fake: nothing yet</button>
+        <button type="button" data-source="real">Real saved stats</button>
+        <button type="button" data-ref="themeButton">Dark theme</button>
+      </div>
+
+      <!-- these write to the real saved stats, through the same functions the app calls -->
+      <div class="st-dev-controls">
+        <span>Real saved stats:</span>
+        <button type="button" data-ref="sitButton">
+          Simulate 1 min of sitting
+        </button>
+        <button type="button" data-ref="stretchButton">
+          Simulate a finished stretch
+        </button>
+        <button type="button" data-ref="clearButton">Clear saved stats</button>
+      </div>
+      <p class="st-dev-status" data-ref="status"></p>
+
+      <div data-ref="page"></div>
+    </div>
+
+    <script type="module" src="./dev.js"></script>
+  </body>
+</html>
