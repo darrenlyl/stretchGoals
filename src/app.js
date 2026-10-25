@@ -143,7 +143,10 @@ ui.onPauseChange((value) => {
 window.api?.onTrayCommand((command) => {
   if (command === 'pause') ui.setPaused(true);
   if (command === 'resume') ui.setPaused(false);
-  if (command === 'recalibrate') ui.showScreen('calibrate');
+  if (command === 'recalibrate') {
+    posture.resetCalibration();
+    ui.showScreen('calibrate');
+  }
   if (command === 'talk') agent.start('talk');
   if (command === 'end-call') agent.end();
   if (command === 'toggle-listen') toggleListening();

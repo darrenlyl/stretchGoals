@@ -25,23 +25,37 @@ export function createSafety(stretches) {
   const listeners = new Set();
   const changed = () => listeners.forEach((cb) => cb(status()));
 
-  async function check() {
-    if (!globalThis.window?.api?.safetyCheck) return status(); // dev page without Electron: local rules only
+  // Checks run strictly one at a time (a promise chain), so IndyKite's graph writes never
+  // interleave. Each request gets a number; only the newest one may call IPC or apply a reply.
+  let latest = 0;
+  let queue = Promise.resolve();
+
+  function check() {
+    if (!globalThis.window?.api?.safetyCheck) return Promise.resolve(status()); // dev page without Electron: local rules only
+    const mine = ++latest;
     source = 'checking';
     changed();
-    try {
-      const r = await window.api.safetyCheck(saved);
-      allowed = new Set(r.allowed);
-      cautions = r.cautions ?? {};
-      source = r.source;
-    } catch (err) {
-      console.warn('[safety] check failed, using the local rules:', err);
-      allowed = new Set(allowedStretches(saved));
-      cautions = localCautions(saved);
-      source = 'local';
-    }
-    changed();
-    return status();
+    const run = queue.then(async () => {
+      if (mine !== latest) return status(); // a newer check is queued; skip this one
+      const person = saved;
+      try {
+        const r = await window.api.safetyCheck(person);
+        if (mine !== latest) return status(); // stale reply: a newer check was requested meanwhile
+        allowed = new Set(r.allowed);
+        cautions = r.cautions ?? {};
+        source = r.source;
+      } catch (err) {
+        if (mine !== latest) return status();
+        console.warn('[safety] check failed, using the local rules:', err);
+        allowed = new Set(allowedStretches(person));
+        cautions = localCautions(person);
+        source = 'local';
+      }
+      changed();
+      return status();
+    });
+    queue = run.catch(() => {});
+    return run;
   }
 
   function set({ conditions = [], cleared = [] }) {

@@ -293,7 +293,14 @@ export function createMaizyAgent({ Conversation, getSignedUrl, controls = null, 
     list_buttons: () => {
       onLog("tool", "list_buttons");
       if (!controls) return JSON.stringify({ available: false, reason: "No app screen here." });
-      return JSON.stringify(controls.list());
+      const buttons = controls.list();
+      if (Array.isArray(buttons) && buttons.length === 0) {
+        return JSON.stringify({
+          buttons: [],
+          hint: "Nothing on screen yet. If they just asked to start the camera, macOS may be showing a camera permission box: tell them to click Allow.",
+        });
+      }
+      return JSON.stringify(buttons);
     },
 
     press_button: async ({ button_id }) => {

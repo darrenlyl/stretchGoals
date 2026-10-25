@@ -1319,6 +1319,7 @@ function buildHealthCheck(safety) {
     );
     // The answer changed which stretches suit them: pick the suggested one and redraw the picker
     suggested = null;
+    if (stretchRun && !safety.isAllowed(stretchRun.id)) stopRunningStretch();
     if (picked && !safety.isAllowed(picked.id)) picked = null;
     delete refs.pickName.closest(".sg-card").dataset.key;
     buildPickList();
