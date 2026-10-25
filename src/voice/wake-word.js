@@ -21,6 +21,29 @@ const COOLDOWN_MS = 3000; // one "Hey Maizy" wakes her once, even though Vosk re
 
 let modelPromise = null; // shared: loading 41 MB once per app run is plenty
 
+// Two soft rising notes, made in code (no sound file). Its own AudioContext, because the mic's
+// one closes as soon as the call takes over the microphone.
+function chime() {
+  try {
+    const ctx = new AudioContext();
+    const t = ctx.currentTime;
+    [660, 880].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, t + i * 0.09);
+      gain.gain.linearRampToValueAtTime(0.15, t + i * 0.09 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + i * 0.09 + 0.22);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(t + i * 0.09);
+      osc.stop(t + i * 0.09 + 0.25);
+    });
+    setTimeout(() => ctx.close(), 500);
+  } catch {
+    // no audio output: the call still starts
+  }
+}
+
 // The model from the Cache API when we have it, otherwise downloaded and stored for next time.
 async function loadModel(Vosk, url) {
   let modelUrl = url;
@@ -52,6 +75,7 @@ export function createWakeWord({ Vosk, onWake, isBlocked = () => false, modelUrl
     const now = Date.now();
     if (now - lastWakeAt < COOLDOWN_MS) return;
     lastWakeAt = now;
+    chime(); // instant "I heard you" while the call connects
     onWake(text);
   }
 
@@ -72,7 +96,7 @@ export function createWakeWord({ Vosk, onWake, isBlocked = () => false, modelUrl
       recognizer.on("partialresult", (m) => heard(m.result.partial));
       recognizer.on("result", (m) => heard(m.result.text));
       const source = ctx.createMediaStreamSource(stream);
-      const node = ctx.createScriptProcessor(4096, 1, 1);
+      const node = ctx.createScriptProcessor(2048, 1, 1); // small chunks = hears you sooner
       node.onaudioprocess = (e) => {
         if (!isBlocked()) recognizer.acceptWaveform(e.inputBuffer);
       };
