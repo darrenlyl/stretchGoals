@@ -87,8 +87,8 @@ export const MAX_DURATION_SECONDS = 5 * 60;
 // the app already says goodbye after 30 s of quiet (maizy-agent.js), so this catches a crashed app.
 export const SILENCE_END_CALL_SECONDS = 45;
 // How soon she decides they've finished speaking: "eager", "normal" or "patient".
-// "patient" waits a bit longer, so she doesn't answer too fast or jump in on a pause.
-export const TURN_EAGERNESS = "patient";
+// "normal" answers soon after they stop, without jumping in on a short pause like "eager" can.
+export const TURN_EAGERNESS = "normal";
 
 // The buttons she can press in our app ("client tools"). The page registers a handler with the same name.
 // expects_response: true = she waits for the answer before talking again.
