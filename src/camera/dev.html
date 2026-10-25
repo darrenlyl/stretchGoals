@@ -10,6 +10,8 @@
     <p id="status">Starting camera…</p>
     <p id="nose"></p>
     <p id="fps"></p>
+    <!-- friendly message from describeCameraError() when the camera can't start -->
+    <p id="camera-error"></p>
 
     <!-- buttons to test stopCamera() and setOverlayVisible() -->
     <div id="controls">
@@ -18,6 +20,11 @@
       <label>
         <input type="checkbox" id="overlay-checkbox" checked />
         Show overlay
+      </label>
+      <!-- camera picker: filled in by fillCameraList() once the camera is allowed -->
+      <label>
+        Camera:
+        <select id="camera-select" disabled></select>
       </label>
     </div>
 
