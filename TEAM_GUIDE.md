@@ -700,7 +700,7 @@ Add a line to the UI and the voice intro: *"Move gently and stop if anything hur
 | 6 | Wire `app.js` | ✅ Done |
 | 7 | Notifications | ✅ Done |
 | 8 | Background running | ✅ Done |
-| 9 | Packaging | 🔜 First test build soon, final build after checkpoint 2 |
+| 9 | Packaging | ✅ Done on Mac (rebuild after merging teammates' updates); Windows needs a Windows laptop |
 
 Maizy doesn't do stretches; the voice and the UI's stretch screen guide them.
 
@@ -718,19 +718,13 @@ Maizy doesn't do stretches; the voice and the UI's stretch screen guide them.
 6. ✅ **Wire `app.js`.** The UI mounts into `#app` (its Start button starts the camera), Maizy into the UI's `#maizy` slot. Every PoseFrame goes through `posture.analyze()`, then to the UI, Maizy, the voice coach, notifications and the tray. Pause (UI or tray) stops it all; tray Recalibrate opens calibration. Until the posture module tracks how long issues last, a temporary helper in `app.js` marks an issue sustained after 5 seconds. In dev, tick "Use fake posture" under the app to drive everything from the fake panel instead of the camera.
 7. ✅ **Notifications** (`src/notifications.js`). `postureNotifier.update(state)` shows a desktop notification for a sustained issue only when you're not looking at the app (window hidden, minimised or behind other apps); while you're looking, Maizy and the voice handle it. Same cooldowns as Joseph's voice coach: 3 minutes per issue, 60 seconds between any two. The title is the medical name, the body the plain name plus a quick fix. Tray Pause stops them, and clicking a notification opens the app. `app.setAppUserModelId` is set for Windows.
 8. ✅ **Background running.** Closing the window hides it instead of quitting, so posture tracking continues from the tray. Tray → Quit or Cmd+Q really quits. `backgroundThrottling: false` keeps timers at full speed while the window is hidden, and on Mac the dock icon brings the window back.
-9. 🔜 **Packaging** with `npm run make`. It builds for the OS you run it on: a `.app` on a Mac, an installer `.exe` on Windows. To ship both, run it once on each.
+9. ✅ **Packaging** with `npm run make`. It builds for the OS you run it on: a `.app` on a Mac, an installer `.exe` on Windows. To ship both, run it once on each.
 
-    **Mac:** add the camera permission text in `forge.config.mjs`, or the packaged app's camera will just show black:
-    ```js
-    packagerConfig: {
-      extendInfo: {
-        NSCameraUsageDescription: "stretchGoals uses your camera to check your posture. Video never leaves your computer.",
-      },
-    },
-    ```
-    The app isn't code-signed, so the first launch needs right-click → Open.
+    **Mac (done):** `npm run make` creates `out/stretchGoals-darwin-arm64/stretchGoals.app` and a zip to share in `out/make/zip/darwin/arm64/`. `forge.config.mjs` sets the app's own ID (`com.stretchgoals.app`), the camera permission text (`NSCameraUsageDescription`, without it the camera shows black), and re-signs the finished app (ad-hoc, no Apple certificate) so macOS allows its notifications. Jordan's MediaPipe files (`public/mediapipe/`) are packed in, so it works with Wi-Fi off. DevTools and the fake posture panel only appear with `npm start`.
+    - The app isn't signed with an Apple certificate, so the first launch needs right-click → Open.
+    - **Voice:** the packaged app reads its ElevenLabs key from `~/Library/Application Support/stretchGoals/.env` (copy your project's `.env` there). The key is never packed into the app.
 
-    **Windows:** the Forge template's default Windows maker (Squirrel) produces a `Setup.exe`. It isn't signed, so Windows SmartScreen will warn: click "More info" → "Run anyway".
+    **Windows:** the Forge template's default Windows maker (Squirrel) produces a `Setup.exe`. It isn't signed, so Windows SmartScreen will warn: click "More info" → "Run anyway". The voice key goes in `%APPDATA%\stretchGoals\.env`.
 
     *Done when:* the packaged app for the demo laptop launches normally, gets the camera, and works with Wi-Fi off.
 

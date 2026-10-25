@@ -5,6 +5,9 @@ import { MakerRpm } from '@electron-forge/maker-rpm';
 import { VitePlugin } from '@electron-forge/plugin-vite';
 import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
+import { execFileSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
 
 const config = {
   packagerConfig: {
@@ -18,6 +21,18 @@ const config = {
     },
   },
   rebuildConfig: {},
+  hooks: {
+    // Mac: re-sign the finished app (ad-hoc, no Apple certificate needed) so its signature
+    // matches appBundleId. Without this, macOS refuses the app's notifications.
+    postPackage: async (_forgeConfig, { platform, outputPaths }) => {
+      if (platform !== 'darwin') return;
+      for (const dir of outputPaths) {
+        for (const name of fs.readdirSync(dir).filter((file) => file.endsWith('.app'))) {
+          execFileSync('codesign', ['--force', '--deep', '--sign', '-', path.join(dir, name)]);
+        }
+      }
+    },
+  },
   makers: [
     new MakerSquirrel({}),
     new MakerZIP({}, ['darwin']),
