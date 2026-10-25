@@ -20,8 +20,94 @@
   min-width: 0;
 }
 
-.st-week {
-  grid-column: 1 / -1; /* the chart spans the full width */
+.st-week,
+.st-habits {
+  grid-column: 1 / -1; /* the chart and the habits span the full width */
+}
+
+/* ── Posture habits: one row per habit, bar length = share of bad-posture time ── */
+
+.st-habit-list {
+  display: grid;
+  gap: 10px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.st-habit {
+  display: grid;
+  grid-template-columns: minmax(0, 14rem) minmax(0, 1fr) 8.5rem;
+  align-items: center;
+  gap: 12px;
+}
+
+.st-habit-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.st-habit-name {
+  font-weight: 600;
+}
+
+.st-habit-plain {
+  color: var(--sg-fg-muted, #5b6474);
+  font-size: 12px;
+}
+
+.st-habit-track {
+  height: 10px;
+  background: var(--sg-surface-2, #f1f3f6);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.st-habit-fill {
+  display: block;
+  height: 100%;
+  background: var(--sg-warn, #c98a00);
+  border-radius: 5px;
+  transition: width 0.4s var(--sg-ease-out, ease-out);
+}
+
+/* the most common habit stands out */
+.st-habit:first-child .st-habit-fill {
+  background: var(--sg-danger, #b3261e);
+}
+
+.st-habit-amount {
+  text-align: right;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* A narrow card: names and numbers on one line, the bar full width underneath */
+.st-habits {
+  container-type: inline-size;
+}
+
+@container (max-width: 560px) {
+  .st-habit {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'text amount'
+      'track track';
+    gap: 4px 12px;
+  }
+
+  .st-habit-text {
+    grid-area: text;
+  }
+
+  .st-habit-track {
+    grid-area: track;
+  }
+
+  .st-habit-amount {
+    grid-area: amount;
+  }
 }
 
 .st-title {
@@ -89,6 +175,7 @@
 
 .st-week-head {
   display: flex;
+  flex-wrap: wrap; /* the summary drops under the title when there isn't room */
   align-items: baseline;
   justify-content: space-between;
   gap: 12px;

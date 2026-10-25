@@ -9,6 +9,15 @@
  * @property {number} scoreSum      total of every score sample, for the average
  * @property {number} scoreSamples  how many score samples were added up
  * @property {number} stretches     stretches finished that day
+ * @property {Record<string, number>} [issueSec]  seconds spent in each issue, by issue ID
+ */
+
+/**
+ * How common one bad habit was over the last 7 days.
+ * @typedef {Object} Habit
+ * @property {string} id       issue ID from src/shared/contracts.js, e.g. "forward_head"
+ * @property {number} minutes  time spent in it
+ * @property {number} share    0–100: its part of all the bad-habit time
  */
 
 /**
@@ -29,6 +38,7 @@
  * @property {number|null} weekAvg    average score over the last 7 days
  * @property {number|null} weekDelta  weekAvg minus the 7 days before; null if either week has no data
  * @property {{ current: number, best: number, stretchedToday: boolean, atRisk: boolean }} streak
+ * @property {Habit[]} habits         last 7 days, most common first; empty if none were seen
  */
 
 /** "YYYY-MM-DD" for the computer's local date (not UTC, so late evenings count as today). */
@@ -99,6 +109,22 @@ function streakFrom(days, now) {
   };
 }
 
+/** Adds up each issue's time over some days and turns it into shares, most common first. */
+function habitsFrom(dayLogs) {
+  const seconds = {};
+  for (const log of dayLogs) {
+    for (const [id, sec] of Object.entries(log.issueSec ?? {})) {
+      seconds[id] = (seconds[id] ?? 0) + sec;
+    }
+  }
+  const total = Object.values(seconds).reduce((sum, sec) => sum + sec, 0);
+  if (total === 0) return [];
+
+  return Object.entries(seconds)
+    .map(([id, sec]) => ({ id, minutes: sec / 60, share: (100 * sec) / total }))
+    .sort((a, b) => b.share - a.share);
+}
+
 /**
  * Everything the stats page needs, from the saved days.
  * @param {Record<string, DayLog>} days  keyed by "YYYY-MM-DD"
@@ -148,5 +174,6 @@ export function computeStats(days, now = Date.now()) {
     weekDelta:
       weekAvg !== null && previousAvg !== null ? weekAvg - previousAvg : null,
     streak: streakFrom(days, now),
+    habits: habitsFrom(logsBetween(-6, 0)),
   };
 }

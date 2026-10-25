@@ -97,7 +97,8 @@ export function analyze(frame) {
   }
 
   const sm = smoothMetrics(m);   // calm the camera jitter before judging
-  const severity = computeSeverities(sm, baseline, 1.5 - sensitivity);
+  // How much drift we allow: strict (1) = 1×, balanced (0.5) = 1.5×, relaxed (0) = 2.25×
+  const severity = computeSeverities(sm, baseline, 1.5 ** (2 - 2 * sensitivity));
   const score = computeScore(severity);
   const issues = [];
 

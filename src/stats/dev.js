@@ -35,8 +35,12 @@ ref('sitButton').addEventListener('click', () => {
   const start = Date.now() - 60000;
   for (let i = 0; i < 600; i++) {
     const score = 60 + Math.round(30 * Math.sin(i / 60)); // drifts between 30 and 90
+    // a low score comes with forward head, a very low one with slouching too
+    const issues = [];
+    if (score < 70) issues.push({ id: 'forward_head' });
+    if (score < 45) issues.push({ id: 'slouching' });
     recordPosture(
-      { present: true, calibrated: true, score, issues: [] },
+      { present: true, calibrated: true, score, issues },
       start + i * 100,
     );
   }
@@ -102,12 +106,21 @@ function fakeDays(rows) {
   const days = {};
   for (const [offset, score, minutes, stretches] of rows) {
     const samples = minutes * 600; // 10 a second
+    const badSec = minutes * 60 * Math.min(Math.max((90 - score) / 40, 0), 1); // worse score, more bad time
     days[dayKey(Date.now() + offset * DAY_MS)] = {
       monitoredSec: minutes * 60,
       goodSec: minutes * 60 * Math.min(Math.max((score - 50) / 40, 0), 1), // better score, more good time
       scoreSum: score * samples,
       scoreSamples: samples,
       stretches,
+      // the bad time split between habits, forward head the most common
+      issueSec: {
+        forward_head: badSec * 0.45,
+        slouching: badSec * 0.3,
+        head_tilt: badSec * 0.15,
+        too_close: badSec * 0.07,
+        uneven_shoulders: badSec * 0.03,
+      },
     };
   }
   return days;

@@ -1,8 +1,9 @@
-// The stats page: today's summary, the streak, and the last 7 days.
+// The stats page: today's summary, the streak, the last 7 days, and your most common habits.
 // Builds its own HTML inside the element it's given. Classes start with "st-" so they can't
 // clash with the UI's "sg-" classes, and colours come from the UI's --sg-* tokens, so it
 // matches the light and dark themes when it sits inside the app.
 import './stats.css';
+import { ISSUES } from '../shared/contracts.js';
 
 const GOOD_SCORE = 80; // green from here, same as the UI
 const OK_SCORE = 50; // yellow from here, red below
@@ -48,6 +49,15 @@ const TEMPLATE = `
     <ol class="st-bars" data-st="bars"></ol>
     <p class="st-note">Bars show your average posture score each day. Empty days had no camera time.</p>
   </section>
+
+  <section class="st-card st-habits" aria-labelledby="st-habits-title">
+    <div class="st-week-head">
+      <h2 id="st-habits-title" class="st-title">Your posture habits</h2>
+      <p class="st-week-summary" data-st="topHabit"></p>
+    </div>
+    <ul class="st-habit-list" data-st="habitList"></ul>
+    <p class="st-note" data-st="habitNote"></p>
+  </section>
 </div>`;
 
 /**
@@ -87,7 +97,7 @@ export function createStatsPage(el, { getStats }) {
 }
 
 function render(refs, stats) {
-  const { today, week, weekAvg, weekDelta, streak } = stats;
+  const { today, week, weekAvg, weekDelta, streak, habits } = stats;
 
   // Today
   refs.todayScore.textContent =
@@ -124,6 +134,49 @@ function render(refs, stats) {
       rounded > 0 ? 'good' : rounded < 0 ? 'bad' : 'none';
   }
   refs.bars.replaceChildren(...week.map(bar));
+
+  // Habits: the most common one, then every one as a share of all bad-posture time
+  const top = habits[0];
+  refs.topHabit.textContent = top
+    ? `Most common: ${ISSUES[top.id]?.medical ?? ISSUES[top.id]?.layman ?? top.id}`
+    : '';
+  refs.habitList.replaceChildren(...habits.map(habitRow));
+  refs.habitNote.textContent = top
+    ? 'Last 7 days. Each bar is that habit’s share of all the time your posture was off.'
+    : 'No bad posture spotted in the last 7 days yet. Keep it up, or turn the camera on to start counting.';
+}
+
+// One habit: both names, a bar as long as its share, and the share and time
+function habitRow(habit) {
+  const names = ISSUES[habit.id] ?? { medical: null, layman: habit.id };
+  const share = Math.round(habit.share);
+
+  const item = document.createElement('li');
+  item.className = 'st-habit';
+
+  const text = document.createElement('div');
+  text.className = 'st-habit-text';
+  const main = document.createElement('span');
+  main.className = 'st-habit-name';
+  main.textContent = names.medical ?? names.layman; // "too close" has no medical name
+  const plain = document.createElement('span');
+  plain.className = 'st-habit-plain';
+  plain.textContent = names.medical ? names.layman : '';
+  text.append(main, plain);
+
+  const track = document.createElement('span');
+  track.className = 'st-habit-track';
+  const fill = document.createElement('span');
+  fill.className = 'st-habit-fill';
+  fill.style.width = `${Math.max(share, 2)}%`; // a tiny share still shows a sliver
+  track.append(fill);
+
+  const amount = document.createElement('span');
+  amount.className = 'st-habit-amount';
+  amount.textContent = `${share}% · ${formatMinutes(habit.minutes)}`;
+
+  item.append(text, track, amount);
+  return item;
 }
 
 // One day in the chart: the score on top, a bar as tall as the score, the weekday underneath.
@@ -172,9 +225,10 @@ function streakMessage({ current, stretchedToday, atRisk }) {
   return 'Finish a stretch to start a streak.';
 }
 
-/** 12 → "12 min", 75 → "1 h 15 min" */
+/** 12 → "12 min", 75 → "1 h 15 min", 0.2 → "<1 min" */
 function formatMinutes(minutes) {
   const total = Math.round(minutes); // 59.9 seconds reads as "1 min", not "0 min"
+  if (total === 0 && minutes > 0) return '<1 min'; // some time, but under half a minute
   if (total < 60) return `${total} min`;
   const hours = Math.floor(total / 60);
   const rest = total % 60;

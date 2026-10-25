@@ -11,6 +11,7 @@ const day = (offset, score, minutes, stretches) => [
     scoreSum: score * minutes * 600,
     scoreSamples: minutes * 600,
     stretches,
+    issueSec: { forward_head: minutes * 6, slouching: minutes * 2 }, // 3 times as much forward head
   },
 ];
 
@@ -56,3 +57,9 @@ const empty = computeStats({}, now);
 check('no data: today average', empty.today.avgScore, null);
 check('no data: week delta', empty.weekDelta, null);
 check('no data: streak', empty.streak.current, 0);
+
+// Habits: last 7 days only, most common first, shares add up to 100
+check('most common habit', stats.habits[0].id, 'forward_head');
+check('forward head share', Math.round(stats.habits[0].share), 75);
+check('slouching share', Math.round(stats.habits[1].share), 25);
+check('no data: no habits', empty.habits.length, 0);

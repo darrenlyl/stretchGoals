@@ -43,6 +43,11 @@ export function recordPosture(state, now = Date.now()) {
   if (state.score >= GOOD_SCORE) today.goodSec += seconds;
   today.scoreSum += state.score;
   today.scoreSamples += 1;
+  // Time spent in each bad habit (issue IDs from contracts.js), for the habit breakdown
+  today.issueSec ??= {}; // days saved before this was added don't have it
+  for (const issue of state.issues ?? []) {
+    today.issueSec[issue.id] = (today.issueSec[issue.id] ?? 0) + seconds;
+  }
   unsaved = true;
 
   if (now - lastSavedAt >= SAVE_EVERY_MS) save(now);
