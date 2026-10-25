@@ -67,12 +67,7 @@ wake.onState((state) => {
 // The menu bar shows a dot next to the score ("•" listening, "◉" on a call) and the tray menu
 // has Talk / End call / Listen for "Hey Maizy", so nothing sits on top of the window.
 function sendMaizyStatus() {
-  if (canCall)
-    window.api.setMaizyStatus({
-      call: agent.status(),
-      wake: wakeState,
-      listenOn: heyMaizyOn,
-    });
+  if (canCall) window.api.setMaizyStatus({ call: agent.status(), wake: wakeState, listenOn: heyMaizyOn });
 }
 
 function toggleListening() {
@@ -100,12 +95,7 @@ const voiceForUi = {
 // ---------------------------------------------------------------------------
 
 // The UI builds every screen, including the camera and Maizy's slot. Its Start button calls camera.startCamera().
-ui.mount(document.querySelector('#app'), {
-  camera,
-  posture,
-  voice: voiceForUi,
-  stretches,
-});
+ui.mount(document.querySelector('#app'), { camera, posture, voice: voiceForUi, stretches });
 maizy.mount(document.querySelector('#maizy'));
 
 // Every PostureState goes to everyone who reacts to posture.
@@ -148,10 +138,7 @@ window.api?.onTrayCommand((command) => {
 
 // The contract promises issues worst first; the voice coach and notifications rely on it.
 function worstFirst(state) {
-  return {
-    ...state,
-    issues: [...state.issues].sort((a, b) => b.severity - a.severity),
-  };
+  return { ...state, issues: [...state.issues].sort((a, b) => b.severity - a.severity) };
 }
 
 // Dev only: a fake posture panel under the app, for testing without a camera.

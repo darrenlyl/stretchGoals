@@ -43,20 +43,11 @@ export const MIN_VISIBILITY = 0.5;
 // ---------------------------------------------------------------------------
 
 export const ISSUES = Object.freeze({
-  forward_head: {
-    medical: 'Forward head posture',
-    layman: 'Neck too far forward',
-  },
-  slouching: { medical: 'Postural kyphosis', layman: 'Hunched over' },
-  head_tilt: {
-    medical: 'Lateral cervical flexion',
-    layman: 'Head tilted to one side',
-  },
-  uneven_shoulders: {
-    medical: 'Shoulder elevation asymmetry',
-    layman: 'One shoulder higher than the other',
-  },
-  too_close: { medical: null, layman: 'Too close to the screen' },
+  forward_head:     { medical: "Forward head posture",         layman: "Neck too far forward" },
+  slouching:        { medical: "Postural kyphosis",            layman: "Hunched over" },
+  head_tilt:        { medical: "Lateral cervical flexion",     layman: "Head tilted to one side" },
+  uneven_shoulders: { medical: "Shoulder elevation asymmetry", layman: "One shoulder higher than the other" },
+  too_close:        { medical: null,                           layman: "Too close to the screen" },
 });
 
 /** @typedef {keyof typeof ISSUES} IssueId */
