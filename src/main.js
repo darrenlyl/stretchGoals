@@ -18,6 +18,14 @@ if (started) {
   app.quit();
 }
 
+// Only one copy at a time: two would fight over the camera, the mic and the saved data.
+// A second launch just brings the first one's window forward.
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+} else {
+  app.on('second-instance', () => showWindow());
+}
+
 // Load secrets from .env. Only the main process can see them.
 try {
   process.loadEnvFile();
