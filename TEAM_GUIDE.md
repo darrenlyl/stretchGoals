@@ -9,7 +9,7 @@ This is the single source of truth for the hackathon. Read it once at kickoff. T
 | 1. Camera & Pose | **Jordan** | the eyes | `src/camera/`, `data/recordings/` |
 | 2. Posture Brain | **Darren** | the doctor | `src/posture/`, `src/shared/` |
 | 3. Voice Coach & Stretches | **Joseph** | the coach | `src/voice/`, `src/stretches/` |
-| 4. Desktop App & Maizy | **Shawn** | the body | `src/main.js`, `src/preload.js`, `src/app.js`, `src/maizy/`, `src/debug/`, `forge.config.mjs` |
+| 4. Desktop App & Maizy | **Shawn** | the body | `src/main.js`, `src/preload.js`, `src/app.js`, `src/notifications.js`, `src/maizy/`, `src/debug/`, `forge.config.mjs` |
 | UI screens | **Claude** (run from Darren's session) | the face | `src/ui/` |
 
 **Contents**
@@ -310,6 +310,7 @@ stretchGoals/
     ├── main.js              ← Shawn: Electron main process (window, tray, notifications, ElevenLabs calls)
     ├── preload.js           ← Shawn: exposes window.api
     ├── app.js               ← Shawn: wires the modules together
+    ├── notifications.js     ← Shawn: desktop notifications for sustained issues
     ├── shared/contracts.js  ← Darren
     ├── camera/              ← Jordan   (index.js, dev.html)
     ├── posture/             ← Darren   (index.js, dev.html, replay.mjs)
@@ -697,7 +698,7 @@ Add a line to the UI and the voice intro: *"Move gently and stop if anything hur
 | 4 | Tray score and menu | ✅ Done |
 | 5 | Maizy | ✅ Done |
 | 6 | Wire `app.js` | ⏳ Waiting on `src/camera/index.js` (Jordan) and `src/posture/index.js` (Darren) |
-| 7 | Notifications | 🔜 Next |
+| 7 | Notifications | ✅ Done |
 | 8 | Background running | ✅ Done |
 | 9 | Packaging | 🔜 First test build soon, final build after checkpoint 2 |
 
@@ -713,9 +714,9 @@ Maizy doesn't do stretches; the voice and the UI's stretch screen guide them.
 2. ✅ **Camera in Electron.** `main.js` asks macOS for camera permission before the window opens. `app.js` shows a temporary mirrored `getUserMedia` feed with a friendly message if the camera is blocked or busy; Jordan's `startCamera()` replaces it at checkpoint 1. Windows has no prompt; the message points to Settings → Privacy & security → Camera.
 3. ✅ **IPC bridge.** `preload.js` exposes exactly four functions on `window.api` (contract 3.5). `tts` calls ElevenLabs from the main process with the key from `.env` (same model and voice settings as Joseph's scripts, 500 characters max); `notify` shows a desktop notification; `setTrayScore` updates the tray; `onTrayCommand` tells the window when a tray item is clicked.
 4. ✅ **Tray.** A person icon in the menu bar with the score next to it (`tray.setTitle` on Mac; on Windows `setTitle` does nothing, so the score is in the tooltip and left-click opens the window). The menu has Show window, Pause/Resume, Recalibrate and Quit; clicks reach the window through `onTrayCommand` (`pause`, `resume`, `recalibrate`, `show`).
-5. ✅ **Maizy.** A 10-frame flipbook the team drew (`src/maizy/maizy-strip.webp`), from fully slumped to standing tall. `maizy.update(state)` picks a frame from the posture score (one frame per 10 points), walks to it one frame at a time, and adds breathing, sway, sparkles from 95, an amber glow on sustained issues and an away state. She cheers when you fix an issue. She mounts into `<div id="maizy">`; her background is transparent, so she works in light and dark mode.
+5. ✅ **Maizy.** A 10-frame flipbook the team drew (`src/maizy/maizy-strip.webp`), from fully slumped to standing tall. `maizy.update(state)` picks a frame from the posture score (one frame per 10 points), walks to it one frame at a time, and adds breathing, sway, sparkles from 95, a red glow on sustained issues and an away state. She cheers when you fix an issue. She mounts into `<div id="maizy">`; her background is transparent, so she works in light and dark mode.
 6. ⏳ **Wire `app.js`** as shown in Section 2: camera → posture → UI, Maizy, voice and tray. Swap out the temporary camera feed and the fake panel. Needs Jordan's and Darren's modules; merge at checkpoint 1. Darren's UI must create `<div id="maizy">` for Maizy to appear.
-7. 🔜 **Notifications.** When an issue becomes sustained, `window.api.notify` shows a desktop notification, only while the window is hidden (the voice speaks while it's open), with a cooldown so it doesn't nag. `app.setAppUserModelId` is already set for Windows.
+7. ✅ **Notifications** (`src/notifications.js`). `postureNotifier.update(state)` shows a desktop notification for a sustained issue only when you're not looking at the app (window hidden, minimised or behind other apps); while you're looking, Maizy and the voice handle it. Same cooldowns as Joseph's voice coach: 3 minutes per issue, 60 seconds between any two. The title is the medical name, the body the plain name plus a quick fix. Tray Pause stops them, and clicking a notification opens the app. `app.setAppUserModelId` is set for Windows.
 8. ✅ **Background running.** Closing the window hides it instead of quitting, so posture tracking continues from the tray. Tray → Quit or Cmd+Q really quits. `backgroundThrottling: false` keeps timers at full speed while the window is hidden, and on Mac the dock icon brings the window back.
 9. 🔜 **Packaging** with `npm run make`. It builds for the OS you run it on: a `.app` on a Mac, an installer `.exe` on Windows. To ship both, run it once on each.
 
