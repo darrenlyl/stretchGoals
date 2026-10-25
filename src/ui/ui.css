@@ -48,6 +48,8 @@
   --sg-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
   --sg-font-display: "Unbounded", ui-rounded, "SF Pro Rounded", -apple-system, "Segoe UI Variable Display", system-ui, sans-serif;
   --sg-font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  /* Welcome heading size: "StretchGoals" is about 7.8em wide in Unbounded, so this fills its column */
+  --sg-welcome-title-size: 12.2cqi;
 
   /* Shape and space */
   --sg-radius: 16px; /* cards */
@@ -138,6 +140,7 @@
   /* Rounded, like her drawing (built into Macs; elsewhere the system face) */
   --sg-font: ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   --sg-font-display: ui-rounded, "SF Pro Rounded", -apple-system, "Segoe UI Variable Display", system-ui, sans-serif;
+  --sg-welcome-title-size: 18.2cqi; /* the system face is narrower: about 5.25em */
 }
 
 /* The page behind the app (seen while resizing, and under the dev panel) */
@@ -799,7 +802,7 @@ body.sg-host {
 /* The app's name is the welcome's heading (the small logo in the top bar is hidden here) */
 .sg-welcome .sg-title {
   max-width: none;
-  font-size: clamp(44px, 18.5cqi, 180px); /* "StretchGoals" fills the column's width */
+  font-size: clamp(36px, var(--sg-welcome-title-size), 180px); /* "StretchGoals" fills the column's width */
   line-height: 0.98;
   letter-spacing: -0.045em;
   white-space: nowrap;
