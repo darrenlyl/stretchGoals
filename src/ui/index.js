@@ -320,26 +320,12 @@ const TEMPLATE = `
 
       <!-- 1. Welcome / camera permission -->
       <section class="sg-card sg-welcome" aria-labelledby="sg-welcome-title">
-        <h1 id="sg-welcome-title" class="sg-title">Meet Maizy. She slouches when you do.</h1>
-        <p class="sg-lede">stretchGoals watches your posture through your camera, tells you what's off in plain words, and coaches you back with a quick stretch.</p>
-        <div class="sg-welcome-body">
-          <div>
-            <h2 class="sg-h3">How it works</h2>
-            <ol class="sg-steps">
-              <li>Turn on your camera.</li>
-              <li>Sit up tall for 3 seconds. That becomes your good posture.</li>
-              <li>Get back to work. We only speak up when a problem lasts.</li>
-            </ol>
-          </div>
-          <div class="sg-privacy">
-            <h2 class="sg-h3">${ICON.lock} Your video stays on this laptop</h2>
-            <p>Posture checks run right here. Video is never recorded or uploaded. Only the text of the coach's voice lines goes online.</p>
-          </div>
-        </div>
+        <h1 id="sg-welcome-title" class="sg-title">Sit like Maizy.</h1>
+        <p class="sg-lede">She copies how you sit. Slouch and she slouches. Sit tall and she cheers.</p>
         <div class="sg-actions">
           <button type="button" class="sg-btn sg-btn-primary" data-ref="startBtn">Start camera</button>
-          <span class="sg-note" data-ref="startNote">Your computer may ask for permission to use the camera.</span>
         </div>
+        <p class="sg-note sg-welcome-note" data-ref="startNote">${ICON.lock}<span>Video never leaves this laptop. Your computer may ask for permission to use the camera.</span></p>
         <div class="sg-alert" role="alert" data-ref="cameraError" hidden>
           <strong>We couldn't turn on your camera.</strong>
           <span data-ref="cameraErrorText"></span>
