@@ -28,7 +28,7 @@ function handleState(state) {
 // Real pipeline: ~10 PoseFrames a second from the camera, judged by the posture brain.
 camera.onPoseFrame((frame) => {
   if (paused || useFake) return;
-  handleState(withSustained(posture.analyze(frame)));
+  handleState(worstFirst(posture.analyze(frame)));
 });
 
 // Pause: from the UI's button or the tray. Stop judging frames and alerting while paused.
@@ -42,24 +42,9 @@ window.api?.onTrayCommand((command) => {
   if (command === 'recalibrate') ui.showScreen('calibrate');
 });
 
-// TEMPORARY until the posture module tracks how long issues last (it sends durationSec 0 and
-// sustained false for now). Counts each issue's time and marks it sustained after 5 seconds,
-// so the red glow, voice and notifications work. Steps aside once posture does it itself.
-const SUSTAINED_AFTER_SEC = 5;
-const issueStartedAt = {};
-function withSustained(state) {
-  if (state.issues.some((issue) => issue.durationSec > 0)) return state;
-  const now = state.timestamp;
-  const ids = new Set(state.issues.map((issue) => issue.id));
-  for (const id of Object.keys(issueStartedAt)) if (!ids.has(id)) delete issueStartedAt[id];
-  const issues = state.issues
-    .map((issue) => {
-      issueStartedAt[issue.id] ??= now;
-      const durationSec = (now - issueStartedAt[issue.id]) / 1000;
-      return { ...issue, durationSec, sustained: durationSec >= SUSTAINED_AFTER_SEC };
-    })
-    .sort((a, b) => b.severity - a.severity); // worst first
-  return { ...state, issues };
+// The contract promises issues worst first; the voice coach and notifications rely on it.
+function worstFirst(state) {
+  return { ...state, issues: [...state.issues].sort((a, b) => b.severity - a.severity) };
 }
 
 // Dev only: a fake posture panel under the app, for testing without a camera.
