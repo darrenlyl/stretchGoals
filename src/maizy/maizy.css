@@ -1,0 +1,57 @@
+/* Maizy's flipbook: the art strip, sparkles, and the warning and away states.
+   No background, so she works on light and dark pages. */
+
+.maizy {
+  --m-warn: oklch(0.83 0.14 75); /* amber = an issue has lasted */
+
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+.maizy.is-mini { overflow: hidden; border-radius: inherit; }
+
+/* One frame-sized window onto the long strip; index.js slides the strip to show a frame */
+.maizy .m-body {
+  position: absolute;
+  overflow: hidden;
+  will-change: transform;
+  transition: opacity 0.4s ease;
+}
+.maizy .m-strip {
+  display: block;
+  max-width: none;
+  user-select: none;
+}
+
+.maizy .m-stars { position: absolute; pointer-events: none; }
+.maizy .m-stars svg {
+  position: absolute;
+  opacity: 0;
+  overflow: visible;
+  filter: drop-shadow(0 0 3px rgba(255, 214, 102, 0.9));
+}
+
+/* An issue has lasted: an amber outline glow around her */
+.maizy.is-warn .m-body {
+  filter: drop-shadow(0 0 4px var(--m-warn)) drop-shadow(0 0 8px var(--m-warn)) !important;
+}
+
+/* Nobody there: fade and ask */
+.maizy .m-bubble {
+  position: absolute;
+  top: 8%;
+  right: 12%;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font: 700 16px system-ui, sans-serif;
+  color: oklch(0.2 0.015 250);
+  background: oklch(0.95 0.01 250);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+.maizy.is-away .m-body { opacity: 0.45; }
+.maizy.is-away .m-bubble { opacity: 1; }
+.maizy.is-mini .m-bubble { display: none; }

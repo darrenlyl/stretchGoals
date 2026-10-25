@@ -12,6 +12,12 @@ body {
   transform: scaleX(-1);
 }
 
+/* Maizy's spot. No background, so she works on light and dark pages. */
+#maizy {
+  width: 240px;
+  height: 300px;
+}
+
 #camera-error {
   color: #b00020;
   font-weight: 600;
