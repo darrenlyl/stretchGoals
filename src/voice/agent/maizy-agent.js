@@ -40,6 +40,10 @@ export const CALL_RULES = {
 
 const AUTO_REASONS = new Set(["stuck_issue", "long_sitting"]);
 
+// They're wrapping up: "bye Maizy", "goodbye", "see you", "that's all", "I'm done", "talk later".
+export const GOODBYE_PATTERN =
+  /\b(bye|goodbye|good bye|bye-bye|see (you|ya)|talk (to you )?later|that'?s all|i'?m done|that'?ll be all|good ?night)\b/i;
+
 // What she says first when they called her ("Hey Maizy" or Talk). Spoken straight away.
 const GREETINGS = ["Hey! What's up?", "Hi! What can I do for you?", "Hey there, I'm listening.", "Hi! How can I help?"];
 
@@ -79,7 +83,8 @@ export function createMaizyAgent({ Conversation, getSignedUrl, controls = null, 
 
   // Call bookkeeping
   let lastActivityAt = 0;
-  let goodbyeAt = 0;
+  let goodbyeAt = 0; // when the call started winding down (they said bye, or went quiet)
+  let saidGoodbye = false; // she has spoken since then
   let quietTimer = null;
   const lastToldAt = {}; // issueId -> when she was last told about it
   let lastAppLineAt = 0;
@@ -155,11 +160,22 @@ export function createMaizyAgent({ Conversation, getSignedUrl, controls = null, 
             answered = true;
             onLog("app", `She answered ${((Date.now() - askedAt) / 1000).toFixed(1)} s after the ${why === "wake_word" ? "wake word" : "start"}`);
           }
+          // Saying goodbye: hang up as soon as she has finished her own goodbye
+          if (goodbyeAt && m === "speaking") saidGoodbye = true;
+          if (goodbyeAt && m === "listening" && saidGoodbye) end();
         },
         onMessage: ({ message, role, source }) => {
           lastActivityAt = Date.now();
           if (message.startsWith("[app]")) return; // already logged by tell()
-          onLog((role ?? source) === "user" ? "you" : "maizy", message);
+          const fromUser = (role ?? source) === "user";
+          onLog(fromUser ? "you" : "maizy", message);
+          // "Bye Maizy", "goodbye", "that's all"...: she says a short goodbye, then the call ends
+          // and the app goes back to listening for "Hey Maizy". Backs up her own end_call tool.
+          if (fromUser && !goodbyeAt && GOODBYE_PATTERN.test(message)) {
+            goodbyeAt = Date.now();
+            saidGoodbye = false;
+            onLog("app", "Heard goodbye: ending the call after her reply");
+          }
         },
         onError: (err) => onLog("err", String(err?.message ?? err)),
       });
@@ -174,6 +190,7 @@ export function createMaizyAgent({ Conversation, getSignedUrl, controls = null, 
     onLog("app", `Call started (${why})`);
     lastActivityAt = Date.now();
     goodbyeAt = 0;
+    saidGoodbye = false;
     toldIssue = null;
     setStatus("talking");
     if (!greeting) tell(openingLine(why, detail));
@@ -213,13 +230,17 @@ export function createMaizyAgent({ Conversation, getSignedUrl, controls = null, 
   function checkQuiet() {
     const now = Date.now();
     if (goodbyeAt) {
-      if (now - goodbyeAt > CALL_RULES.goodbyeGraceSec * 1000) end();
+      // Normally she hangs up (or onModeChange does) right after her goodbye. This is the backstop,
+      // never cutting her off mid-sentence unless she runs twice as long.
+      const waited = (now - goodbyeAt) / 1000;
+      if ((waited > CALL_RULES.goodbyeGraceSec && mode !== "speaking") || waited > CALL_RULES.goodbyeGraceSec * 2) end();
       return;
     }
     if (mode === "speaking" || stretchRunning) lastActivityAt = now; // a guided stretch is quiet on purpose
     if (now - lastActivityAt < CALL_RULES.quietHangUpSec * 1000) return;
     tell("[app] They've gone quiet. Say a very short goodbye, then end the call.");
     goodbyeAt = now;
+    saidGoodbye = false;
   }
 
   // ---------------------------------------------------------------------------
