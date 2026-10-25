@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>UI playground · stretchGoals</title>
+    <!--
+      UI playground. Run `npx vite` from the repo root, then open
+      http://localhost:5173/src/ui/dev.html
+      The dark strip is NOT part of the app: it pushes fake PostureStates into
+      ui.update() and fakes the other tracks' modules (camera, posture, voice,
+      stretches). Add ?bare to the URL to mount the UI with no services at all.
+    -->
+    <style>
+      body {
+        margin: 0;
+        background: #cfcdc6;
+        color: #f2f1ec;
+        font: 12px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+      .dev-bar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 10px 22px;
+        padding: 10px 16px;
+        background: #22231f;
+      }
+      .dev-group {
+        display: grid;
+        gap: 4px;
+        align-content: start;
+      }
+      .dev-group > b {
+        color: #a9a79f;
+        font-weight: 600;
+      }
+      .dev-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 4px 10px;
+      }
+      .dev-bar label {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        white-space: nowrap;
+      }
+      .dev-bar input[type="range"] {
+        width: 90px;
+      }
+      .dev-bar output {
+        display: inline-block;
+        min-width: 2.2em;
+        font-variant-numeric: tabular-nums;
+        color: #fff;
+      }
+      .dev-bar button,
+      .dev-bar select {
+        font: inherit;
+      }
+      .dev-bar a {
+        color: #9cc0ff;
+      }
+      #dev-log {
+        width: 260px;
+        height: 64px;
+        overflow: hidden;
+        color: #cfcdc5;
+        font-family: ui-monospace, Menlo, Consolas, monospace;
+        font-size: 11px;
+        white-space: pre;
+      }
+      #frame {
+        width: 1000px;
+        height: 700px;
+        margin: 16px;
+        background: #fff;
+        outline: 1px solid #b5b3ab;
+      }
+      #frame[data-size="800"] {
+        width: 800px;
+        height: 600px;
+      }
+      #frame[data-size="fill"] {
+        width: auto;
+        height: calc(100vh - 32px);
+      }
+      /* Ossie placeholder (dev only; Shawn's ossie.mount() replaces this) */
+      .dev-ossie {
+        position: absolute;
+        inset: 16px;
+        display: grid;
+        place-content: center;
+        gap: 4px;
+        text-align: center;
+        border: 1px dashed #b9b7af;
+        border-radius: 12px;
+        color: #5b5a55;
+        font: 13px/1.4 system-ui, sans-serif;
+      }
+      .dev-ossie b {
+        color: #1f201d;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="dev-bar">
+      <div class="dev-group">
+        <b>Window</b>
+        <select id="size">
+          <option value="1000">1000 × 700</option>
+          <option value="800">800 × 600</option>
+          <option value="fill">Fill page</option>
+        </select>
+        <select id="jump" title="ui.showScreen(name)">
+          <option value="">Jump to screen…</option>
+          <option>welcome</option>
+          <option>calibrate</option>
+          <option>dashboard</option>
+        </select>
+        <a id="bare-link" href="?bare">Mount without services</a>
+      </div>
+
+      <div class="dev-group">
+        <b>PostureState</b>
+        <div class="dev-row">
+          <label><input type="checkbox" id="present" checked /> present</label>
+          <label><input type="checkbox" id="calibrated" /> calibrated</label>
+          <label><input type="checkbox" id="unreadable" /> score null</label>
+        </div>
+        <div class="dev-row">
+          <label>score <input type="range" id="score" min="0" max="100" value="92" /> <output id="score-out">92</output></label>
+          <label><input type="checkbox" id="sustained" /> sustained</label>
+        </div>
+      </div>
+
+      <div class="dev-group">
+        <b>Issue severity (0 = off)</b>
+        <div class="dev-row" id="issue-sliders"></div>
+      </div>
+
+      <div class="dev-group">
+        <b>Fake modules</b>
+        <div class="dev-row">
+          <label>camera
+            <select id="camera-mode">
+              <option value="placeholder">grey placeholder</option>
+              <option value="webcam">real webcam</option>
+              <option value="NotAllowedError">fails: blocked</option>
+              <option value="NotReadableError">fails: busy</option>
+              <option value="NotFoundError">fails: none</option>
+            </select>
+          </label>
+          <label>calibration
+            <select id="calib-outcome">
+              <option value="ok">succeeds</option>
+              <option value="moved">fails: moved</option>
+              <option value="low_visibility">fails: low visibility</option>
+            </select>
+          </label>
+        </div>
+        <div class="dev-row">
+          <button id="tray-recal">Tray: start calibration</button>
+          <button id="tray-pause">Tray: pause</button>
+          <button id="tray-resume">Tray: resume</button>
+          <span>paused: <output id="paused-out">no</output></span>
+        </div>
+      </div>
+
+      <div class="dev-group">
+        <b>Calls into fake modules</b>
+        <div id="dev-log"></div>
+      </div>
+    </div>
+
+    <div id="frame"></div>
+
+    <script type="module">
+      import { ui } from "./index.js";
+      import { createFallbackStretches } from "./fallback-stretches.js";
+      import { ISSUES, ISSUE_IDS, emptyPostureState } from "../shared/contracts.js";
+
+      const $ = (id) => document.getElementById(id);
+      const bare = new URLSearchParams(location.search).has("bare");
+      if (bare) {
+        $("bare-link").textContent = "Mount with fake services";
+        $("bare-link").href = "?";
+      }
+
+      // ── Log of calls the UI makes into the fake modules ──────────────────
+      const lines = [];
+      function log(text) {
+        lines.unshift(`${new Date().toLocaleTimeString()}  ${text}`);
+        lines.length = Math.min(lines.length, 5);
+        $("dev-log").textContent = lines.join("\n");
+        console.log("[dev]", text);
+      }
+
+      // ── Fake camera ─────────────────────────────────────────────────────
+      // A grey "person" drawn on a canvas and streamed into the <video>,
+      // plus dots on the overlay at the same spots, to check they line up.
+      const W = 640;
+      const H = 480;
+      const POINTS = { nose: [0.5, 0.42], leftEar: [0.41, 0.4], rightEar: [0.59, 0.4], leftShoulder: [0.3, 0.7], rightShoulder: [0.7, 0.7] };
+
+      function placeholderStream() {
+        const c = document.createElement("canvas");
+        c.width = W;
+        c.height = H;
+        const g = c.getContext("2d");
+        let t = 0;
+        setInterval(() => {
+          t += 0.15;
+          const bob = Math.sin(t) * 3;
+          g.fillStyle = "#77766f";
+          g.fillRect(0, 0, W, H);
+          g.fillStyle = "#9a9890";
+          g.beginPath();
+          g.ellipse(W * 0.5, H * 0.4 + bob, 62, 76, 0, 0, Math.PI * 2);
+          g.fill();
+          g.beginPath();
+          g.roundRect(W * 0.26, H * 0.66 + bob, W * 0.48, H * 0.5, 90);
+          g.fill();
+        }, 100);
+        return c.captureStream(10);
+      }
+
+      function drawOverlay(canvas) {
+        const g = canvas.getContext("2d");
+        const px = ([x, y]) => [x * canvas.width, y * canvas.height];
+        g.clearRect(0, 0, canvas.width, canvas.height);
+        g.strokeStyle = "#7CFFB2";
+        g.lineWidth = 3;
+        const line = (a, b) => {
+          g.beginPath();
+          g.moveTo(...px(POINTS[a]));
+          g.lineTo(...px(POINTS[b]));
+          g.stroke();
+        };
+        line("leftEar", "leftShoulder");
+        line("rightEar", "rightShoulder");
+        line("leftShoulder", "rightShoulder");
+        g.fillStyle = "#7CFFB2";
+        for (const p of Object.values(POINTS)) {
+          g.beginPath();
+          g.arc(...px(p), 6, 0, Math.PI * 2);
+          g.fill();
+        }
+      }
+
+      const fakeCamera = {
+        async startCamera(video, canvas) {
+          log("camera.startCamera(video, canvas)");
+          const mode = $("camera-mode").value;
+          await new Promise((r) => setTimeout(r, 500));
+          if (mode.endsWith("Error")) throw new DOMException("Fake camera failure", mode);
+          video.srcObject =
+            mode === "webcam" ? await navigator.mediaDevices.getUserMedia({ video: { width: W, height: H } }) : placeholderStream();
+          await video.play();
+          canvas.width = video.videoWidth || W;
+          canvas.height = video.videoHeight || H;
+          drawOverlay(canvas);
+        },
+        stopCamera() {},
+        setOverlayVisible(v) {
+          log(`camera.setOverlayVisible(${v})`);
+        },
+      };
+
+      // ── Fake posture ────────────────────────────────────────────────────
+      // startCalibration animates calibrationProgress over `ms` by feeding states.
+      let calibration = null; // { start, ms, resolve }
+      const fakePosture = {
+        startCalibration(ms = 3000) {
+          log(`posture.startCalibration(${ms})`);
+          return new Promise((resolve) => {
+            calibration = { start: performance.now(), ms, resolve };
+          });
+        },
+        resetCalibration() {
+          log("posture.resetCalibration()");
+          $("calibrated").checked = false;
+        },
+        setSensitivity(v) {
+          log(`posture.setSensitivity(${Number(v).toFixed(2)})`);
+        },
+      };
+
+      function finishCalibration() {
+        const outcome = $("calib-outcome").value;
+        const { resolve } = calibration;
+        calibration = null;
+        if (!$("present").checked) {
+          resolve({ ok: false, reason: "no_person", message: "We couldn't see anyone. Sit where the camera can see your head and shoulders." });
+        } else if (outcome === "moved") {
+          resolve({ ok: false, reason: "moved", message: "You moved a bit during calibration. Sit still for 3 seconds and try again." });
+        } else if (outcome === "low_visibility") {
+          resolve({ ok: false, reason: "low_visibility", message: "We couldn't see your ears and shoulders clearly. Try more light in front of you." });
+        } else {
+          $("calibrated").checked = true;
+          resolve({ ok: true });
+        }
+      }
+
+      // ── Fake voice and stretches ────────────────────────────────────────
+      const fakeVoice = {
+        voiceCoach: {
+          setMuted(m) {
+            log(`voice.voiceCoach.setMuted(${m})`);
+          },
+          update() {},
+        },
+      };
+
+      // The UI's own backup stretches already behave like Joseph's module
+      // (events every second), so the fake just wraps them with logging.
+      const base = createFallbackStretches();
+      const fakeStretches = {
+        ...base,
+        startStretch(id) {
+          log(`stretches.startStretch("${id}")`);
+          base.startStretch(id);
+        },
+        stopStretch() {
+          log("stretches.stopStretch()");
+          base.stopStretch();
+        },
+      };
+      base.onStretchEvent((e) => {
+        if (e.type !== "tick") log(`stretch event: ${e.type} step ${e.stepIndex}, ${e.secondsLeft}s`);
+      });
+
+      // ── Mount ───────────────────────────────────────────────────────────
+      const frame = $("frame");
+      $("size").addEventListener("change", () => (frame.dataset.size = $("size").value));
+      $("jump").addEventListener("change", () => {
+        if ($("jump").value) ui.showScreen($("jump").value);
+        $("jump").value = "";
+      });
+
+      ui.mount(frame, bare ? {} : { camera: fakeCamera, posture: fakePosture, voice: fakeVoice, stretches: fakeStretches });
+      document.getElementById("ossie").innerHTML = '<div class="dev-ossie"><b>Ossie goes here</b><span>ossie.mount(#ossie)</span></div>';
+
+      let paused = false;
+      ui.onPauseChange((p) => {
+        paused = p;
+        $("paused-out").textContent = p ? "yes" : "no";
+        log(`ui.onPauseChange → ${p}`);
+      });
+      window.ui = ui; // handy in the console
+
+      // ── Controls → PostureState ─────────────────────────────────────────
+      const sliders = {};
+      const startedAt = {};
+      for (const id of ISSUE_IDS) {
+        const label = document.createElement("label");
+        label.title = ISSUES[id].layman;
+        label.innerHTML = `${id} <input type="range" min="0" max="1" step="0.05" value="0" /> <output>0</output>`;
+        const input = label.querySelector("input");
+        input.addEventListener("input", () => (label.querySelector("output").textContent = input.value));
+        sliders[id] = input;
+        $("issue-sliders").appendChild(label);
+      }
+      $("score").addEventListener("input", () => ($("score-out").textContent = $("score").value));
+
+      function buildState() {
+        const now = performance.now();
+        const state = emptyPostureState(now);
+        state.present = $("present").checked;
+        state.calibrated = $("calibrated").checked;
+
+        if (calibration) {
+          const p = Math.min(1, (now - calibration.start) / calibration.ms);
+          state.calibrating = true;
+          state.calibrationProgress = p;
+          if (p >= 1) finishCalibration();
+        }
+
+        const measurable = state.present && state.calibrated && !$("unreadable").checked;
+        state.score = measurable ? Number($("score").value) : null;
+
+        for (const id of ISSUE_IDS) {
+          const severity = Number(sliders[id].value);
+          state.metrics.severity[id] = measurable ? severity : 0;
+          if (!measurable || severity === 0) {
+            delete startedAt[id];
+            continue;
+          }
+          startedAt[id] ??= now;
+          state.issues.push({
+            id,
+            medical: ISSUES[id].medical,
+            layman: ISSUES[id].layman,
+            severity,
+            durationSec: (now - startedAt[id]) / 1000,
+            sustained: $("sustained").checked,
+          });
+        }
+        state.issues.sort((a, b) => b.severity - a.severity); // worst first
+        state.metrics.headForward = state.metrics.severity.forward_head;
+        state.metrics.slouch = state.metrics.severity.slouching;
+        return state;
+      }
+
+      // ~10 states per second, like the real camera loop. Paused = no frames.
+      setInterval(() => {
+        if (!paused || calibration) ui.update(buildState());
+      }, 100);
+
+      // ── Tray buttons (things app.js would do) ───────────────────────────
+      $("tray-recal").addEventListener("click", () => {
+        if (calibration) return;
+        fakePosture.startCalibration(3000).then((r) => log(`tray calibration result: ${JSON.stringify(r)}`));
+      });
+      $("tray-pause").addEventListener("click", () => ui.setPaused(true));
+      $("tray-resume").addEventListener("click", () => ui.setPaused(false));
+    </script>
+  </body>
+</html>
