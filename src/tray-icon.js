@@ -1,0 +1,6 @@
+// Tray icon: a small person, as PNG data. Kept in code so it works in the packaged app.
+// Black on transparent lets macOS recolour it for light and dark menu bars.
+export const TRAY_ICON_16 =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAb0lEQVR4nGNgoCFoYGBgeA/FDaRqTmBgYPiPhhNItR3dAJJcUYDFgAISfcGwH0nzflI1w4ACFJMEBBgg/t2PhhugcgQ138fifxi+T8gQAyTb0TXDXGFAjDcojsaBN8ABSzpwIMUAmCENUEyyZqIBAKxzPG1AxWutAAAAAElFTkSuQmCC';
+export const TRAY_ICON_32 =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAxUlEQVR4nO2W0Q2EIBBEp4QrwRIowVIowRLowBIoxRIswRIswcslS0IMQRCH82NfMj8KmUF2EUC5hwWwAjhEqzzrgo+Mz/Js8yljHjQxA2wFATaWuSkwDzKMAGNFgJERABUBaOQ6oEsnfADsGfNdxlAZACwJ80XedcPI6WdZVf9Kfqt1F6L8Ewap7lwBxoXon6wHV9H/Z7lWc9tgHtS0JbO0V1DpFsRz5tavEJPq/9R5QEMDaAAN8PcAuLgb0u6CrwqgPMoXxJ3stZOFMtsAAAAASUVORK5CYII=';

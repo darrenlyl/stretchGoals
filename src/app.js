@@ -1,7 +1,10 @@
 // Window entry point. Connects all the modules (TEAM_GUIDE.md Section 2).
 import './index.css';
+import { maizy } from './maizy/index.js';
 
 console.log('stretchGoals renderer loaded');
+
+maizy.mount(document.querySelector('#maizy'));
 
 // TEMPORARY: plain camera feed. Replaced by Jordan's startCamera() at checkpoint 1.
 const video = document.querySelector('#camera-video');
@@ -36,3 +39,14 @@ function cameraErrorMessage(err) {
 }
 
 showCamera();
+
+// Dev only: the fake posture panel drives Maizy and the tray until real modules are wired (Job 6).
+if (import.meta.env.DEV && window.api) {
+  import('./debug/fake-posture.js').then(({ mountFakePosturePanel }) => {
+    mountFakePosturePanel(document.querySelector('#debug-panel'), (state) => {
+      maizy.update(state);
+      window.api.setTrayScore(state.score);
+    });
+  });
+  window.api.onTrayCommand((command) => console.log('Tray command:', command));
+}

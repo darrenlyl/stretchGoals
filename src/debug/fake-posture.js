@@ -90,7 +90,7 @@ export function mountFakePosturePanel(el, onState) {
         severity: severityById,
         headForward: severityById.forward_head,
         slouch: severityById.slouching,
-        // Fake angles for Ossie
+        // Fake angles for Maizy
         headTiltDeg: isPresent ? severityById.head_tilt * 20 : null,
         shoulderTiltDeg: isPresent ? severityById.uneven_shoulders * 10 : null,
         closeness: isPresent ? 1 + severityById.too_close * 0.4 : null,

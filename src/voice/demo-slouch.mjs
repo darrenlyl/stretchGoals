@@ -1,11 +1,11 @@
-// Demo: what Ossie says when you slouch and keep slouching.
+// Demo: what Maizy says when you slouch and keep slouching.
 // It follows the voice coach rules from TEAM_GUIDE.md (Track 3, milestone 4):
 //   - only speak about SUSTAINED issues (lasting ~5 s)
 //   - wait 3 minutes before repeating the same issue, 60 s between any two lines
 //   - say a praise line when the issue goes away
 //
 // Run from the repo root:  node --env-file=.env src/voice/demo-slouch.mjs
-// Files land in voice-tuning/demo/ (git-ignored), numbered in the order Ossie says them.
+// Files land in voice-tuning/demo/ (git-ignored), numbered in the order Maizy says them.
 import { mkdir, writeFile } from "node:fs/promises";
 
 const MODEL_ID = "eleven_v4_turbo";

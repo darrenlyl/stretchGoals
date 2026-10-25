@@ -3,7 +3,7 @@
 import { writeFile } from "node:fs/promises";
 
 const VOICE_ID = process.env.ELEVENLABS_VOICE_ID; // ElevenLabs dashboard -> Voices -> copy ID
-// Team pick: v4 Turbo with Ellie's clone. Fast enough for live (~100 ms), and the Ossie agent can use it too.
+// Team pick: v4 Turbo with Ellie's clone. Fast enough for live (~100 ms), and the Maizy agent can use it too.
 // Speed: 0.7 (slow) to 1.2 (fast). Tune these by ear with src/voice/tune-voice.mjs.
 const MODEL_ID = "eleven_v4_turbo";
 const SPEED = 0.9;

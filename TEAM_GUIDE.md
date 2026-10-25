@@ -1,6 +1,6 @@
 # stretchGoals: Team Guide
 
-> A desktop app for Mac and Windows that watches your posture through the laptop camera. It tells you what's off in plain words and by the medical term, then coaches you back with a voice and guided stretches. Ossie, a little skeleton working at a desk, slouches when you slouch.
+> A desktop app for Mac and Windows that watches your posture through the laptop camera. It tells you what's off in plain words and by the medical term, then coaches you back with a voice and guided stretches. Maizy, a little blonde girl, slouches when you slouch.
 
 This is the single source of truth for the hackathon. Read it once at kickoff. Then give it to your Claude session so it knows the plan, the rules, and your role.
 
@@ -9,7 +9,7 @@ This is the single source of truth for the hackathon. Read it once at kickoff. T
 | 1. Camera & Pose | **Jordan** | the eyes | `src/camera/`, `data/recordings/` |
 | 2. Posture Brain | **Darren** | the doctor | `src/posture/`, `src/shared/` |
 | 3. Voice Coach & Stretches | **Joseph** | the coach | `src/voice/`, `src/stretches/` |
-| 4. Desktop App & Ossie | **Shawn** | the body | `src/main.js`, `src/preload.js`, `src/app.js`, `src/ossie/`, `src/debug/`, `forge.config.js` |
+| 4. Desktop App & Maizy | **Shawn** | the body | `src/main.js`, `src/preload.js`, `src/app.js`, `src/maizy/`, `src/debug/`, `forge.config.mjs` |
 | UI screens | **Claude** (run from Darren's session) | the face | `src/ui/` |
 
 **Contents**
@@ -77,22 +77,22 @@ People hunch at laptops for hours. Their neck creeps forward ("tech neck"), thei
 4. **Scores** your posture from 0 to 100 in real time, shown in the app and in the tray icon (the menu bar on Mac, the taskbar tray on Windows).
 5. **Coaches** you with a friendly ElevenLabs voice, without nagging.
 6. **Fixes** it with short guided stretches matched to your problem.
-7. **Mirrors** you through **Ossie**, a skeleton at a desk whose posture copies yours.
+7. **Mirrors** you through **Maizy**, a little girl whose posture copies yours.
 
 ### The demo moment
 The judge sits down and calibrates. Then they slouch:
-- Ossie slouches with them.
+- Maizy slouches with them.
 - The score drops.
 - A voice says "Forward head posture. In plain words, your neck's too far out. Want to try a chin tuck?"
-- Ossie leads the stretch.
+- The voice leads the stretch.
 
-When they sit up, the score recovers and Ossie cheers. Everything we build serves this 60-second story.
+When they sit up, the score recovers and Maizy cheers. Everything we build serves this 60-second story.
 
 ### What makes it stand out
 - **Private:** the AI runs locally, and only short text lines go to ElevenLabs.
 - **Educational:** it shows medical terms next to plain language.
 - **Personal:** it calibrates to the person, so it doesn't compare them to some "perfect" body.
-- **Delightful:** Ossie gives it personality.
+- **Delightful:** Maizy gives it personality.
 
 ### Non-goals (don't spend time here)
 - It is not a medical device. Show a "not medical advice" line in the app.
@@ -108,7 +108,7 @@ When they sit up, the score recovers and Ossie cheers. Everything we build serve
    │
    ▼
 [Track 1: camera]  ── PoseFrame, ~10 per second ──►  [Track 2: posture]  ── PostureState ──┬──► [UI: score, issues, calibration]
-   │                                                                                      ├──► [Track 4: Ossie, tray score, notifications]
+   │                                                                                      ├──► [Track 4: Maizy, tray score, notifications]
    └──► video + dot overlay (shown inside the UI)                                          └──► [Track 3: voice coach, stretch suggestions]
 
  [Track 4: the Electron shell wraps everything. The main process holds the ElevenLabs key.]
@@ -120,7 +120,7 @@ Shawn owns `src/app.js`, which wires it all together. It will look roughly like 
 import { startCamera, onPoseFrame } from "./camera/index.js";
 import { analyze } from "./posture/index.js";
 import { voiceCoach } from "./voice/index.js";
-import { ossie } from "./ossie/index.js";
+import { maizy } from "./maizy/index.js";
 import { ui } from "./ui/index.js";
 
 await startCamera(document.querySelector("#camera-video"), document.querySelector("#camera-overlay"));
@@ -128,7 +128,7 @@ await startCamera(document.querySelector("#camera-video"), document.querySelecto
 onPoseFrame((frame) => {
   const state = analyze(frame);      // Darren
   ui.update(state);                  // Claude
-  ossie.update(state);               // Shawn
+  maizy.update(state);               // Shawn
   voiceCoach.update(state);          // Joseph
   window.api.setTrayScore(state.score);
 });
@@ -185,7 +185,7 @@ export const ISSUES = {
 
 These IDs connect everything:
 - Joseph's voice lines and stretches are keyed by them.
-- Shawn's Ossie poses are keyed by them.
+- Shawn's Maizy warning glows are keyed by them.
 - The UI looks up display names from them.
 
 ### 3.3 `PostureState`: Track 2 → everyone
@@ -210,7 +210,7 @@ These IDs connect everything:
  * @property {number}  calibrationProgress  0–1 while calibrating
  * @property {number|null} score            0–100 (100 = matches your calibrated posture); null if not present or not calibrated
  * @property {Issue[]} issues               issues detected right now (may be empty)
- * @property {Object}  metrics              raw numbers for debugging and for Ossie (Darren documents the fields)
+ * @property {Object}  metrics              raw numbers for debugging and for Maizy (Darren documents the fields)
  */
 ```
 
@@ -222,7 +222,7 @@ These IDs connect everything:
 | `src/posture/index.js` | Darren | `analyze(frame) → PostureState`, `startCalibration(ms = 3000) → Promise<{ ok, reason? }>`, `resetCalibration()`, `setSensitivity(0–1)` |
 | `src/voice/index.js` | Joseph | `voiceCoach.update(state)`, `voiceCoach.setMuted(bool)`, `speakLine(lineId) → Promise` |
 | `src/stretches/index.js` | Joseph | `STRETCHES` (data array), `stretchesFor(issueId) → Stretch[]`, `startStretch(id)`, `stopStretch()`, `onStretchEvent(cb) → unsubscribe` |
-| `src/ossie/index.js` | Shawn | `ossie.mount(el)`, `ossie.update(state)`, `ossie.playStretch(stretchId)`, `ossie.celebrate()` |
+| `src/maizy/index.js` | Shawn | `maizy.mount(el)`, `maizy.update(state)`, `maizy.celebrate()`, `maizy.setVitality(0–1 \| null)` |
 | `src/debug/fake-posture.js` | Shawn | `mountFakePosturePanel(el, onState)`: sliders and checkboxes that emit fake `PostureState`s |
 | `src/ui/index.js` | Claude | `ui.mount(el)`, `ui.update(state)` |
 
@@ -278,13 +278,13 @@ window.api.onTrayCommand(cb)  // cb("pause" | "resume" | "recalibrate" | "show")
 
 ### Mac and Windows
 
-The app must run on both. Electron, MediaPipe, the posture math, the voice and Ossie all work the same on both systems, so **almost all code is shared**. The few differences are OS features, and they all live in Shawn's files (`src/main.js`, `forge.config.js`):
+The app must run on both. Electron, MediaPipe, the posture math, the voice and Maizy all work the same on both systems, so **almost all code is shared**. The few differences are OS features, and they all live in Shawn's files (`src/main.js`, `forge.config.mjs`):
 
 | Feature | Mac | Windows |
 |---|---|---|
 | Score in the tray | `tray.setTitle("72")` shows text in the menu bar | `setTitle` does nothing. Draw the score onto the tray icon image (e.g. render it on a small canvas), and also set `tray.setToolTip("Posture: 72")` |
 | Camera permission | Call `systemPreferences.askForMediaAccess("camera")` from the main process | That function is Mac-only. Windows uses Settings → Privacy & security → Camera. Just call `getUserMedia`, and if it fails, show a message telling the user to allow camera access there |
-| Permission text when packaged | `NSCameraUsageDescription` in `forge.config.js` | Not needed |
+| Permission text when packaged | `NSCameraUsageDescription` in `forge.config.mjs` | Not needed |
 | Notifications | Work out of the box | Call `app.setAppUserModelId("com.stretchgoals.app")` at startup, or notifications may not appear |
 | Closing the window | Hide it and keep running (the app stays in the menu bar) | Same: hide to the tray icon, and quit from the tray menu |
 | Packaging | `npm run make` → `.app` (zip) | `npm run make` → installer `.exe`. **Must be built on a Windows machine** |
@@ -303,7 +303,7 @@ stretchGoals/
 ├── TEAM_GUIDE.md            ← this file
 ├── .env                     ← ELEVENLABS_API_KEY=...   (NEVER committed)
 ├── .env.example             ← ELEVENLABS_API_KEY=      (committed, no value)
-├── forge.config.js          ← Shawn
+├── forge.config.mjs         ← Shawn
 ├── package.json
 ├── data/recordings/         ← Jordan: recorded PoseFrames (JSON, numbers only, no images)
 └── src/
@@ -315,7 +315,7 @@ stretchGoals/
     ├── posture/             ← Darren   (index.js, dev.html, replay.mjs)
     ├── voice/               ← Joseph   (index.js, dev.html, lines.js, audio/)
     ├── stretches/           ← Joseph   (index.js, dev.html)
-    ├── ossie/               ← Shawn    (index.js, dev.html, ossie.svg)
+    ├── maizy/               ← Shawn    (index.js, maizy.css, dev.html, maizy-strip.webp)
     ├── debug/               ← Shawn    (fake-posture.js)
     └── ui/                  ← Claude via Darren
 ```
@@ -363,14 +363,14 @@ This is a learning hackathon. When Claude gives you code, make sure you can expl
 
 Kickoff clock time: **____** (Darren fills in). Hour 0 is kickoff.
 
-| Hours | Jordan (camera) | Darren (posture) | Joseph (voice) | Shawn (app & Ossie) |
+| Hours | Jordan (camera) | Darren (posture) | Joseph (voice) | Shawn (app & Maizy) |
 |---|---|---|---|---|
 | 0–1 | Kickoff, read docs | Write contracts, kickoff | ElevenLabs account, kickoff | **Scaffold the repo** |
 | 1–3 | Webcam + MediaPipe in `dev.html` | Math on paper, fake landmarks | Hello-world TTS from a Node script | **Fake posture panel**, camera inside Electron |
 | 3–5 | Overlay drawing, **record landmark files** | Metrics + calibration on recordings | Write voice lines, pre-generate audio | IPC bridge (`window.api`), tray score |
-| 5–8 | 10-per-second loop, `onPoseFrame`, no-person handling | Smoothing, issues, score; `replay.mjs` | `voiceCoach` rules, cooldowns | Ossie v1 (3–4 poses), wire up `app.js` |
+| 5–8 | 10-per-second loop, `onPoseFrame`, no-person handling | Smoothing, issues, score; `replay.mjs` | `voiceCoach` rules, cooldowns | Maizy v1 (10-frame flipbook), wire up `app.js` |
 | **8** | **Checkpoint 1: everyone merges** | | | |
-| 8–14 | Bundle MediaPipe locally, camera controls | Tune thresholds with the team slouching | Stretch data + guided stretch flow | Notifications, background running, Ossie stretches |
+| 8–14 | Bundle MediaPipe locally, camera controls | Tune thresholds with the team slouching | Stretch data + guided stretch flow | Notifications, background running, first test build |
 | **14** | **Checkpoint 2: full loop works** | | | |
 | 14–20 | Bug fixing, help Darren tune | Tuning, sensitivity setting | Polish voice, Agents stretch goal | Packaging (Mac `.app`, Windows installer if a Windows laptop is available), Windows fixes, integration fixes |
 | **20** | **Feature freeze. Bug fixes only after this.** | | | |
@@ -379,15 +379,15 @@ Kickoff clock time: **____** (Darren fills in). Hour 0 is kickoff.
 ### Checkpoint 1 (hour 8): "it's alive"
 - [ ] `npm start` opens the app and shows the live camera with dots on the body.
 - [ ] Real `PoseFrame`s flow into `analyze()`, and the score visibly drops when someone slouches, even if the numbers are rough.
-- [ ] Ossie reacts to `PostureState`, from fake or real data.
+- [ ] Maizy reacts to `PostureState`, from fake or real data.
 - [ ] One voice line plays inside the app.
 - [ ] The tray shows the score (menu bar on Mac; icon or tooltip on Windows).
 - [ ] If a Windows laptop is available: `npm start` works on it too.
 
 ### Checkpoint 2 (hour 14): "the demo works"
-- [ ] Calibrate → slouch → issue detected after about 5 seconds → Ossie slouches → voice and notification fire once.
-- [ ] Start the suggested stretch → guided with voice → Ossie does the stretch.
-- [ ] Sit up → score recovers → Ossie celebrates.
+- [ ] Calibrate → slouch → issue detected after about 5 seconds → Maizy slouches → voice and notification fire once.
+- [ ] Start the suggested stretch → guided by the voice and the stretch screen.
+- [ ] Sit up → score recovers → Maizy celebrates.
 - [ ] Detection keeps running when the window is hidden.
 
 ### Freeze (hour 20)
@@ -599,7 +599,7 @@ $$
 - MDN `Math.atan2`: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/atan2
 - Search "exponential moving average explained" and "hysteresis thresholding" for 5-minute intros.
 
-**If you finish early:** fill in `metrics` with values Ossie can use directly, e.g. `metrics.headForward` from 0 to 1 and `metrics.headTiltDeg` with a sign, so Ossie copies the exact angle. Then add a "minutes in good posture today" counter.
+**If you finish early:** fill in `metrics` with values Maizy can use directly, e.g. `metrics.headForward` from 0 to 1 and `metrics.headTiltDeg` with a sign, so Maizy copies the exact angle. Then add a "minutes in good posture today" counter.
 
 ---
 
@@ -647,7 +647,7 @@ $$
    - Say a short praise line when an issue you warned about goes away.
 
    Agree with Shawn on who fires the desktop notification, so the voice and the notification don't double up. One option: voice when the window is open, notification when it's hidden. *Done when:* clicking fake states in `dev.html` produces sensible, non-annoying behavior.
-5. **Stretches.** Fill in the `STRETCHES` array and build `startStretch(id)`. It walks through the steps with voice and a timer, and emits stretch events so the UI and Ossie can follow along.
+5. **Stretches.** Fill in the `STRETCHES` array and build `startStretch(id)`. It walks through the steps with voice and a timer, and emits stretch events so the UI can follow along.
 6. **Live TTS in the app.** Once Shawn's `window.api.tts(text)` exists (around checkpoint 1), use it for dynamic lines. Play the result with `new Audio(URL.createObjectURL(new Blob([bytes], { type: "audio/mpeg" }))).play()`.
 7. **Stretch goal: ElevenLabs Agents** (conversational voice). The user could ask "what stretch should I do?" out loud. Only start this after checkpoint 2.
 
@@ -676,43 +676,50 @@ Add a line to the UI and the voice intro: *"Move gently and stop if anything hur
 - Text-to-Speech API reference: https://elevenlabs.io/docs/api-reference/text-to-speech/convert
 - MDN `HTMLAudioElement`: https://developer.mozilla.org/en-US/docs/Web/API/HTMLAudioElement
 
-**If you finish early:** give the voice a personality (Ossie's voice?), add a "stretch break every 45 minutes" reminder, or try ElevenLabs Agents.
+**If you finish early:** give the voice a personality (Maizy's voice?), add a "stretch break every 45 minutes" reminder, or try ElevenLabs Agents.
 
 ---
 
-### Track 4: Desktop App & Ossie ("the body"), Shawn
+### Track 4: Desktop App & Maizy ("the body"), Shawn
 
-**Mission:** make it a real desktop app for Mac and Windows, with a tray score, notifications, background running, and packaging. Bring Ossie to life, and act as integration lead. You own all the Mac-vs-Windows differences (see "Mac and Windows" in Section 4).
+**Mission:** make it a real desktop app for Mac and Windows, with a tray score, notifications, background running, and packaging. Bring Maizy to life, and act as integration lead. You own all the Mac-vs-Windows differences (see "Mac and Windows" in Section 4).
 
-**You'll learn:** Electron's main and renderer processes, IPC, OS integration (tray, notifications, permissions) on two operating systems, SVG/CSS animation, and packaging and shipping an app.
+**Branch:** `task4`. Teammates can get the latest app shell with `git pull origin task4`, then `npm install`.
 
-**Start right away:** you only depend on Electron's docs. Everything else is driven by your own fake posture panel.
+**Status**
+
+| # | Milestone | Status |
+|---|---|---|
+| 0 | Scaffold | ✅ Done |
+| 1 | Fake posture panel | ✅ Done |
+| 2 | Camera in Electron | ✅ Done |
+| 3 | IPC bridge (`window.api`) | ✅ Done |
+| 4 | Tray score and menu | ✅ Done |
+| 5 | Maizy | ✅ Done |
+| 6 | Wire `app.js` | ⏳ Waiting on `src/camera/index.js` (Jordan) and `src/posture/index.js` (Darren) |
+| 7 | Notifications | 🔜 Next |
+| 8 | Background running | ✅ Done |
+| 9 | Packaging | 🔜 First test build soon, final build after checkpoint 2 |
+
+Maizy doesn't do stretches; the voice and the UI's stretch screen guide them.
+
+**You'll learn:** Electron's main and renderer processes, IPC, OS integration (tray, notifications, permissions) on two operating systems, flipbook (sprite sheet) animation, and packaging and shipping an app.
+
+**Try it:** `npm start` opens the app, with the fake posture panel below Maizy driving her and the tray score (dev only). Playgrounds (`npx vite`): `/src/debug/dev.html` (fake panel), `/src/maizy/dev.html` (Maizy).
 
 **Milestones**
-0. **Scaffold** (hour 0, see Section 4). Others are waiting on this, so keep it fast and simple.
-1. **Fake posture panel** (`src/debug/fake-posture.js`), by about hour 2. It has a score slider, a checkbox and severity slider for each issue, and a "sustained" toggle, and it emits `PostureState`s. *Done when:* Joseph and the UI can use it to test without a camera.
-2. **Camera in Electron.** Show a plain `getUserMedia` feed in the app window to prove camera permission works.
-   - **Mac:** `systemPreferences.askForMediaAccess("camera")` in the main process triggers the prompt.
-   - **Windows:** there's no prompt from Electron. If Windows camera privacy settings block desktop apps, `getUserMedia` fails, so show a message pointing to Settings → Privacy & security → Camera.
+0. ✅ **Scaffold.** Electron Forge with the Vite template. Each track has its folder; `.env` is git-ignored and `.env.example` lists `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID` and `ELEVENLABS_AGENT_ID`. The Forge config is `forge.config.mjs`.
+1. ✅ **Fake posture panel** (`src/debug/fake-posture.js`). A score slider, and for each issue an "active" checkbox, a severity slider and a "sustained" toggle. It sends a `PostureState` on every change and 10 times a second. Use it with `mountFakePosturePanel(el, (state) => yourModule.update(state))`.
+2. ✅ **Camera in Electron.** `main.js` asks macOS for camera permission before the window opens. `app.js` shows a temporary mirrored `getUserMedia` feed with a friendly message if the camera is blocked or busy; Jordan's `startCamera()` replaces it at checkpoint 1. Windows has no prompt; the message points to Settings → Privacy & security → Camera.
+3. ✅ **IPC bridge.** `preload.js` exposes exactly four functions on `window.api` (contract 3.5). `tts` calls ElevenLabs from the main process with the key from `.env` (same model and voice settings as Joseph's scripts, 500 characters max); `notify` shows a desktop notification; `setTrayScore` updates the tray; `onTrayCommand` tells the window when a tray item is clicked.
+4. ✅ **Tray.** A person icon in the menu bar with the score next to it (`tray.setTitle` on Mac; on Windows `setTitle` does nothing, so the score is in the tooltip and left-click opens the window). The menu has Show window, Pause/Resume, Recalibrate and Quit; clicks reach the window through `onTrayCommand` (`pause`, `resume`, `recalibrate`, `show`).
+5. ✅ **Maizy.** A 10-frame flipbook the team drew (`src/maizy/maizy-strip.webp`), from fully slumped to standing tall. `maizy.update(state)` picks a frame from the posture score (one frame per 10 points), walks to it one frame at a time, and adds breathing, sway, sparkles from 95, an amber glow on sustained issues and an away state. She cheers when you fix an issue. She mounts into `<div id="maizy">`; her background is transparent, so she works in light and dark mode.
+6. ⏳ **Wire `app.js`** as shown in Section 2: camera → posture → UI, Maizy, voice and tray. Swap out the temporary camera feed and the fake panel. Needs Jordan's and Darren's modules; merge at checkpoint 1. Darren's UI must create `<div id="maizy">` for Maizy to appear.
+7. 🔜 **Notifications.** When an issue becomes sustained, `window.api.notify` shows a desktop notification, only while the window is hidden (the voice speaks while it's open), with a cooldown so it doesn't nag. `app.setAppUserModelId` is already set for Windows.
+8. ✅ **Background running.** Closing the window hides it instead of quitting, so posture tracking continues from the tray. Tray → Quit or Cmd+Q really quits. `backgroundThrottling: false` keeps timers at full speed while the window is hidden, and on Mac the dock icon brings the window back.
+9. 🔜 **Packaging** with `npm run make`. It builds for the OS you run it on: a `.app` on a Mac, an installer `.exe` on Windows. To ship both, run it once on each.
 
-   Wrap the Mac call in `if (process.platform === "darwin")`. *Done when:* you see yourself in the Electron window.
-3. **IPC bridge.** Build `preload.js` with `contextBridge.exposeInMainWorld("api", …)` and handlers in `main.js` for `tts`, `notify`, `setTrayScore` and `onTrayCommand` (contract 3.5). `tts` uses the same `fetch` as Joseph's script, with the key from `process.env`. *Done when:* each `window.api` call works from the window's DevTools console.
-4. **Tray.** Create a `Tray` whose menu has Show window, Pause/Resume, Recalibrate, and Quit. Showing the score differs by OS:
-   - **Mac:** `tray.setTitle("72")` puts text next to the menu bar icon.
-   - **Windows:** `setTitle` does nothing. Set `tray.setToolTip("Posture: 72")`, and for a visible number, redraw the tray icon: draw the score on a small canvas in the renderer, send the image data URL over IPC, and call `tray.setImage(nativeImage.createFromDataURL(url))`. A coloured icon (green/yellow/red) is a fine simpler version.
-
-   *Done when:* the score is visible from the tray on the demo laptop's OS.
-5. **Ossie v1.** Build an SVG skeleton at a desk, with body parts in separate groups (`#head`, `#neck`, `#spine`, `#arms`) so each can rotate around its joint. `ossie.update(state)` maps issue severities to joint angles, with CSS transitions for smoothness. Add an idle "typing" loop. Make poses for upright, neck forward, slouched, head tilt, and celebrate. *Done when:* moving the fake panel's sliders makes Ossie copy them.
-6. **Wire `app.js`** as shown in Section 2. Merge at checkpoint 1.
-7. **Notifications.** Use `new Notification({ title, body }).show()` in the main process for sustained issues. On Windows, call `app.setAppUserModelId("com.stretchgoals.app")` once at startup or notifications may not show. Coordinate with Joseph on who alerts when.
-8. **Background running.**
-   - Create the window with `webPreferences: { backgroundThrottling: false }`.
-   - On both Mac and Windows, closing the window should *hide* it, not quit. The app keeps running in the tray, and "Quit" in the tray menu really quits.
-   - **Test early:** hide the window for 30 seconds while slouching and check the score still updates in the tray.
-9. **Ossie stretches.** Animate along with Joseph's stretch events, e.g. chin tucks and shoulder rolls.
-10. **Packaging** with `npm run make`. It builds for the OS you run it on: a `.app` on a Mac, an installer `.exe` on Windows. To ship both, run it once on each.
-
-    **Mac:** add the camera permission text in `forge.config.js`, or the packaged app's camera will just show black:
+    **Mac:** add the camera permission text in `forge.config.mjs`, or the packaged app's camera will just show black:
     ```js
     packagerConfig: {
       extendInfo: {
@@ -726,15 +733,14 @@ Add a line to the UI and the voice intro: *"Move gently and stop if anything hur
 
     *Done when:* the packaged app for the demo laptop launches normally, gets the camera, and works with Wi-Fi off.
 
-**Ossie tip:** drive the joints with numbers, not fixed poses. That way Ossie mirrors *how much* you're slouching:
+**Maizy tip:** the score picks the frame, so Maizy mirrors *how much* you're slouching. The strip is one long image; a frame-sized window shows one frame, and sliding the strip changes it:
 
 ```js
-const sev = (state, id) => state.issues.find((i) => i.id === id)?.severity ?? 0;
-head.style.transform  = `translate(${sev(state, "forward_head") * 12}px, ${sev(state, "slouching") * 8}px)`;
-spine.style.transform = `rotate(${sev(state, "slouching") * 15}deg)`;
+const frame = Math.min(9, Math.floor(state.score / 10)); // 0 = slumped, 9 = tall
+strip.style.transform = `translateX(${-frame * frameWidth}px)`;
 ```
 
-Set `transform-origin` on each group to its joint (the neck base, the hips) so it bends naturally.
+She moves up a frame as soon as the score reaches the next band, but only moves down once it's clearly lower, so a borderline score doesn't make her flicker.
 
 **Integration lead duties:**
 - At each checkpoint, pull everyone's branches into `main` and run `npm start`.
@@ -747,10 +753,10 @@ Set `transform-origin` on each group to its joint (the neck base, the hips) so i
 - Tray: https://www.electronjs.org/docs/latest/api/tray
 - Notifications: https://www.electronjs.org/docs/latest/tutorial/notifications
 - `systemPreferences` (camera access): https://www.electronjs.org/docs/latest/api/system-preferences
-- MDN SVG tutorial: https://developer.mozilla.org/en-US/docs/Web/SVG/Tutorial
+- MDN CSS transforms (how the flipbook slides): https://developer.mozilla.org/en-US/docs/Web/CSS/transform
 
 **If you finish early:**
-- an always-on-top mini Ossie window (`alwaysOnTop: true, frame: false, transparent: true`)
+- an always-on-top mini Maizy window (`alwaysOnTop: true, frame: false, transparent: true`)
 - launch at login
 - an app icon
 - helping Darren tune
@@ -764,7 +770,7 @@ Claude builds `src/ui/` from Darren's session. Other Claude sessions should not 
 - **Calibration screen:** "sit up tall" instructions and a progress ring driven by `calibrationProgress`.
 - **Live dashboard:**
   - a slot for Jordan's video and overlay (`#camera-video`, `#camera-overlay`)
-  - a slot for Ossie (`#ossie`)
+  - a slot for Maizy (`#maizy`)
   - the score
   - current issues, showing the medical and plain-language names
   - a suggested stretch
@@ -782,11 +788,11 @@ The UI only calls the module APIs in Section 3.4 and only reads `PostureState`. 
 1. **Hook (15 s):** "How's your posture right now? Most of us are slowly turning into question marks."
 2. **Calibrate (15 s):** open the app → "sit up tall" → done. Mention that everything runs on the laptop and no video leaves it.
 3. **Slouch (30 s):** push the neck forward:
-   - Ossie copies it.
+   - Maizy copies it.
    - The score drops.
    - After about 5 seconds the voice names the issue: "Forward head posture: neck too far out."
    - Point at the medical and plain-language labels.
-4. **Fix (30 s):** start the suggested chin-tuck stretch. The voice guides it, Ossie does it too, and the score recovers. Ossie celebrates.
+4. **Fix (30 s):** start the suggested chin-tuck stretch. The voice guides it, the score recovers, and Maizy celebrates.
 5. **Background (15 s):** hide the window, show the tray score and a notification. If you have both laptops, mention it runs on Mac and Windows.
 6. **Close (15 s):** what's next and who built what.
 
@@ -809,7 +815,7 @@ The UI only calls the module APIs in Section 3.4 and only reads `PostureState`. 
 |---|---|
 | **Electron** | Puts a hidden copy of Chrome inside a desktop app, so you build the app with HTML, CSS and JS |
 | **Main process** | Electron's "backend". It's Node.js, can touch the OS (tray, notifications, files) and holds secrets |
-| **Renderer** | Electron's "frontend": the window where our camera, Ossie and UI run |
+| **Renderer** | Electron's "frontend": the window where our camera, Maizy and UI run |
 | **Preload / IPC** | The safe bridge between the renderer and the main process (`window.api`) |
 | **MediaPipe** | Google's on-device ML library. `PoseLandmarker` finds 33 body points in an image |
 | **Landmark** | One body point (x, y, z, visibility) |
