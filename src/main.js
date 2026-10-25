@@ -33,12 +33,17 @@ const exiting = started || !gotLock;
 // Load secrets from .env. Only the main process can see them.
 // npm start uses the project's .env. The packaged app uses one in its data folder
 // (Mac: ~/Library/Application Support/stretchGoals/.env).
-const envFiles = [path.join(process.cwd(), '.env'), path.join(app.getPath('userData'), '.env')];
+const envFiles = [
+  path.join(process.cwd(), '.env'),
+  path.join(app.getPath('userData'), '.env'),
+];
 const envFile = envFiles.find((file) => fs.existsSync(file));
 if (envFile) {
   process.loadEnvFile(envFile);
 } else {
-  console.warn(`No .env file found. Voice (tts) will not work until you add one at ${envFiles[1]}`);
+  console.warn(
+    `No .env file found. Voice (tts) will not work until you add one at ${envFiles[1]}`,
+  );
 }
 
 // Windows needs an app ID for notifications to show.
@@ -100,7 +105,9 @@ app.whenReady().then(async () => {
   if (process.platform === 'darwin') {
     systemPreferences
       .askForMediaAccess('microphone')
-      .then((mic) => console.log('Microphone access:', mic ? 'allowed' : 'denied'));
+      .then((mic) =>
+        console.log('Microphone access:', mic ? 'allowed' : 'denied'),
+      );
   }
 
   // Mac: clicking the dock icon brings the hidden window back.
@@ -112,7 +119,9 @@ app.whenReady().then(async () => {
 ipcMain.handle('maizy-signed-url', async () => {
   const { ELEVENLABS_API_KEY, ELEVENLABS_AGENT_ID } = process.env;
   if (!ELEVENLABS_API_KEY || !ELEVENLABS_AGENT_ID) {
-    throw new Error('Missing ELEVENLABS_API_KEY or ELEVENLABS_AGENT_ID in .env');
+    throw new Error(
+      'Missing ELEVENLABS_API_KEY or ELEVENLABS_AGENT_ID in .env',
+    );
   }
   const res = await fetch(
     `https://api.elevenlabs.io/v1/convai/conversation/get-signed-url?agent_id=${ELEVENLABS_AGENT_ID}`,
@@ -148,13 +157,17 @@ const TTS_MAX_CHARS = 500;
 ipcMain.handle('tts', async (_event, text) => {
   const { ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID } = process.env;
   if (!ELEVENLABS_API_KEY || !ELEVENLABS_VOICE_ID) {
-    throw new Error('Missing ELEVENLABS_API_KEY or ELEVENLABS_VOICE_ID in .env');
+    throw new Error(
+      'Missing ELEVENLABS_API_KEY or ELEVENLABS_VOICE_ID in .env',
+    );
   }
   if (typeof text !== 'string' || text.trim() === '') {
     throw new Error('tts(text) needs a non-empty string');
   }
   if (text.length > TTS_MAX_CHARS) {
-    throw new Error(`tts text is too long (${text.length} > ${TTS_MAX_CHARS} chars)`);
+    throw new Error(
+      `tts text is too long (${text.length} > ${TTS_MAX_CHARS} chars)`,
+    );
   }
 
   const res = await fetch(
@@ -169,7 +182,11 @@ ipcMain.handle('tts', async (_event, text) => {
       body: JSON.stringify({
         text,
         model_id: TTS_MODEL_ID,
-        voice_settings: { stability: 0.5, similarity_boost: 0.75, speed: TTS_SPEED },
+        voice_settings: {
+          stability: 0.5,
+          similarity_boost: 0.75,
+          speed: TTS_SPEED,
+        },
       }),
     },
   );
@@ -182,7 +199,10 @@ ipcMain.handle('tts', async (_event, text) => {
 // notify(title, body): desktop notification.
 ipcMain.on('notify', (_event, title, body) => {
   if (!Notification.isSupported()) return;
-  const notification = new Notification({ title: String(title), body: String(body ?? '') });
+  const notification = new Notification({
+    title: String(title),
+    body: String(body ?? ''),
+  });
   // Clicking the notification opens the app
   notification.on('click', showWindow);
   notification.show();
