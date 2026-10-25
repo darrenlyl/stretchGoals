@@ -1,15 +1,44 @@
 import { computeMetrics } from "./metrics.js";
 import { computeSeverities, computeScore } from "./severity.js";
 import { ISSUES } from "../shared/contracts.js";
+import { calibrate } from "./calibration.js";
 
 let baseline = null;
+let calib = null;
 
-// TEMPORARY: lets us test before calibration exists
-export function setBaseline(b) {
-  baseline = b;
+export function startCalibration(ms = 3000){
+    return new Promise((resolve) => {
+        calib = { frames: [], startTs: null, ms, resolve };
+    });
 }
-
 export function analyze(frame) {
+  // --- Calibration in progress: collect frames, report progress ---
+  if (calib) {
+    if (calib.startTs === null) calib.startTs = frame.timestamp; // first frame starts the clock
+    calib.frames.push(frame);
+    const elapsed = frame.timestamp - calib.startTs;
+
+    if (elapsed >= calib.ms) {
+      // 3 seconds are up: build the baseline (or find out why we can't)
+      const result = calibrate(calib.frames);
+      if (result.ok) baseline = result.baseline;
+      calib.resolve(result); // tells whoever is waiting (the UI) the result
+      calib = null;          // calibration is over
+    } else {
+      // Still collecting: no score yet, just progress for the UI's ring
+      return {
+        timestamp: frame.timestamp,
+        present: frame.landmarks !== null,
+        calibrated: baseline !== null,
+        calibrating: true,
+        calibrationProgress: elapsed / calib.ms,
+        score: null,
+        issues: [],
+        metrics: {},
+      };
+    }
+  }
+
   const present = frame.landmarks !== null;
   const m = computeMetrics(frame);
 
