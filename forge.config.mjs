@@ -12,12 +12,14 @@ import path from 'node:path';
 const config = {
   packagerConfig: {
     asar: true,
-    // Mac: the packaged app's own name for permissions (camera, notifications)
+    // Mac: the packaged app's own name for permissions (camera, microphone, notifications)
     appBundleId: 'com.stretchgoals.app',
     extendInfo: {
-      // Mac shows this when asking for the camera. Without it, the packaged app can't use the camera.
+      // Mac shows these when asking. Without them, the packaged app can't use the camera or mic.
       NSCameraUsageDescription:
         'stretchGoals uses your camera to check your posture. Video never leaves your computer.',
+      NSMicrophoneUsageDescription:
+        'stretchGoals listens for "Hey Maizy" on this computer, and for your voice when you talk to Maizy.',
     },
   },
   rebuildConfig: {},

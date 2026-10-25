@@ -1,11 +1,13 @@
 // Desktop notifications for posture issues (Track 4, Job 7).
 // Rule: notify about a sustained issue only when you're not looking at the app (window hidden,
 // minimised or behind other apps). While you're looking at it, Maizy and the voice handle it.
-// Cooldowns match Joseph's voice coach, so nobody gets nagged.
+// While you stay away and an issue lasts, you get a reminder about once a minute (the 60 s gap wins).
+// Sent through voice.notify, so the coach reads each one aloud (and skips its own nudge meanwhile).
 import { ISSUES } from './shared/contracts.js';
+import { notify } from './voice/index.js';
 
-const SAME_ISSUE_MS = 1 * 5_000; // wait 3 minutes before notifying about the same issue again
-const ANY_NOTIFY_MS = 3_000; // and at least 60 seconds between any two notifications
+const SAME_ISSUE_MS = 10_000; // wait 10 seconds before notifying about the same issue again
+const ANY_NOTIFY_MS = 60_000; // and at least 60 seconds between any two notifications
 
 // One short fix per issue, shown under the issue name
 const TIPS = {
@@ -50,7 +52,7 @@ function update(state, now = Date.now()) {
   const names = ISSUES[issue.id];
   const title = names.medical ?? names.layman;
   const body = names.medical ? `${names.layman}. ${TIPS[issue.id]}` : TIPS[issue.id];
-  window.api.notify(title, body);
+  notify(title, body);
   lastAlertAt[issue.id] = now;
   lastNotifyAt = now;
 }

@@ -113,7 +113,10 @@ export const ISSUE_IDS = Object.freeze(Object.keys(ISSUES));
 // ---------------------------------------------------------------------------
 //   src/camera/index.js     Jordan  startCamera(videoEl, canvasEl) -> Promise, stopCamera(), onPoseFrame(cb) -> unsubscribe, setOverlayVisible(bool)
 //   src/posture/index.js    Darren  analyze(frame) -> PostureState, startCalibration(ms = 3000) -> Promise<CalibrationResult>, resetCalibration(), setSensitivity(0–1)
-//   src/voice/index.js      Joseph  voiceCoach.update(state), voiceCoach.setMuted(bool), speakLine(lineId) -> Promise
+//   src/voice/index.js      Joseph  voiceCoach.update(state), voiceCoach.setMuted(bool), speakLine(lineId) -> Promise, notify(title, body) (shows AND reads it aloud)
+//   src/voice/agent/maizy-agent.js Joseph createMaizyAgent(...) -> { update(state), start(reason), end(), setAutoWake(bool), onChange(cb) }
+//   src/voice/agent/app-controls.js Joseph createAppControls(root) -> { list(), press(id) }  (Maizy presses buttons when asked)
+//   src/voice/wake-word.js  Joseph  createWakeWord(...) -> { start(), stop(), onState(cb) }  ("Hey Maizy", offline)
 //   src/stretches/index.js  Joseph  STRETCHES, stretchesFor(issueId) -> Stretch[], startStretch(id), stopStretch(), onStretchEvent(cb) -> unsubscribe
 //   src/maizy/index.js      Shawn   maizy.mount(el), maizy.update(state), maizy.celebrate(), maizy.setVitality(0–1 | null)
 //   src/debug/fake-posture.js Shawn mountFakePosturePanel(el, onState)
@@ -132,9 +135,11 @@ export const ISSUE_IDS = Object.freeze(Object.keys(ISSUES));
 // 3.5 window.api (Shawn builds it in preload.js)
 // ---------------------------------------------------------------------------
 //   window.api.tts(text)            -> Promise<Uint8Array> of mp3 bytes (key stays in the main process)
-//   window.api.notify(title, body)  native desktop notification
+//   window.api.notify(title, body)  native desktop notification (call voice.notify instead, so it is also read aloud)
+//   window.api.maizySignedUrl()     -> Promise<string>, a short-lived link for one call with Maizy (key stays in main)
 //   window.api.setTrayScore(score)  number, or null to show "–"
-//   window.api.onTrayCommand(cb)    cb("pause" | "resume" | "recalibrate" | "show")
+//   window.api.setMaizyStatus(s)    { call, wake, listenOn }: the Maizy dot and menu items in the tray
+//   window.api.onTrayCommand(cb)    cb("pause" | "resume" | "recalibrate" | "show" | "talk" | "end-call" | "toggle-listen")
 
 /** A PostureState for "nothing to report yet". Handy as a starting value. */
 export function emptyPostureState(timestamp = 0) {

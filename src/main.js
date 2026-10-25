@@ -19,6 +19,14 @@ if (started) {
   app.quit();
 }
 
+// Only one copy at a time: two would fight over the camera, the mic and the saved data.
+// A second launch just brings the first one's window forward.
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+} else {
+  app.on('second-instance', () => showWindow());
+}
+
 // Load secrets from .env. Only the main process can see them.
 // npm start uses the project's .env. The packaged app uses one in its data folder
 // (Mac: ~/Library/Application Support/stretchGoals/.env).
@@ -82,8 +90,33 @@ app.whenReady().then(async () => {
   createWindow();
   createTray();
 
+  // The mic is for "Hey Maizy" and for talking to her. Asked after the window opens, so
+  // an unanswered prompt doesn't hold the app up.
+  if (process.platform === 'darwin') {
+    systemPreferences
+      .askForMediaAccess('microphone')
+      .then((mic) => console.log('Microphone access:', mic ? 'allowed' : 'denied'));
+  }
+
   // Mac: clicking the dock icon brings the hidden window back.
   app.on('activate', showWindow);
+});
+
+// maizySignedUrl(): a short-lived link (about 15 minutes, this agent only) for one call with Maizy.
+// The API key stays here; the window only ever sees the link.
+ipcMain.handle('maizy-signed-url', async () => {
+  const { ELEVENLABS_API_KEY, ELEVENLABS_AGENT_ID } = process.env;
+  if (!ELEVENLABS_API_KEY || !ELEVENLABS_AGENT_ID) {
+    throw new Error('Missing ELEVENLABS_API_KEY or ELEVENLABS_AGENT_ID in .env');
+  }
+  const res = await fetch(
+    `https://api.elevenlabs.io/v1/convai/conversation/get-signed-url?agent_id=${ELEVENLABS_AGENT_ID}`,
+    { headers: { 'xi-api-key': ELEVENLABS_API_KEY } },
+  );
+  if (!res.ok) {
+    throw new Error(`ElevenLabs ${res.status}: ${await res.text()}`);
+  }
+  return (await res.json()).signed_url;
 });
 
 // Any real quit (tray Quit, Cmd+Q, shutting down) lets the window close.
@@ -159,7 +192,23 @@ ipcMain.on('set-tray-score', (_event, score) => {
   if (tray) updateTrayScore();
 });
 
-// Sends 'pause' | 'resume' | 'recalibrate' | 'show' to the window.
+// setMaizyStatus({ call, wake, listenOn }): the dot next to the tray score and the Maizy menu items.
+//   call: 'idle' | 'connecting' | 'talking'   wake: 'off' | 'loading' | 'listening' | 'error'
+ipcMain.on('set-maizy-status', (_event, status) => {
+  const next = {
+    call: String(status?.call ?? 'idle'),
+    wake: String(status?.wake ?? 'off'),
+    listenOn: Boolean(status?.listenOn),
+  };
+  if (JSON.stringify(next) === JSON.stringify(maizyStatus)) return;
+  maizyStatus = next;
+  if (tray) {
+    updateTrayScore();
+    updateTrayMenu();
+  }
+});
+
+// Sends 'pause' | 'resume' | 'recalibrate' | 'show' | 'talk' | 'end-call' | 'toggle-listen' to the window.
 function sendTrayCommand(command) {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('tray-command', command);
@@ -171,6 +220,24 @@ function sendTrayCommand(command) {
 let tray = null; // kept at the top level so it isn't garbage-collected and vanish
 let trayScore = null;
 let paused = false;
+let maizyStatus = { call: 'idle', wake: 'off', listenOn: false };
+
+// What Maizy is doing, in words (menu) and as a dot before the score (Mac menu bar).
+function maizyLine() {
+  if (maizyStatus.call === 'connecting') return 'Calling Maizy…';
+  if (maizyStatus.call === 'talking') return 'Talking to Maizy';
+  return {
+    listening: 'Listening for “Hey Maizy”',
+    loading: 'Getting “Hey Maizy” ready…',
+    error: '“Hey Maizy” isn’t working',
+    off: '“Hey Maizy” is off',
+  }[maizyStatus.wake];
+}
+function maizyDot() {
+  if (maizyStatus.call !== 'idle') return '◉ '; // on a call
+  if (maizyStatus.wake === 'listening') return '• '; // listening for her name
+  return '';
+}
 
 function createTray() {
   const icon = nativeImage.createEmpty();
@@ -190,14 +257,26 @@ function updateTrayScore() {
   const text = trayScore === null ? '–' : String(trayScore);
   // Mac shows text next to the icon. Windows ignores setTitle, so it gets the tooltip.
   if (process.platform === 'darwin') {
-    tray.setTitle(` ${text}`, { fontType: 'monospacedDigit' });
+    tray.setTitle(` ${maizyDot()}${text}`, { fontType: 'monospacedDigit' });
   }
-  tray.setToolTip(`Posture: ${text}`);
+  tray.setToolTip(`Posture: ${text} · ${maizyLine()}`);
 }
 
-// Rebuilt when paused changes, so the item says Pause or Resume.
+// Rebuilt when paused or Maizy's status changes, so the items match.
 function updateTrayMenu() {
+  const onCall = maizyStatus.call !== 'idle';
   const menu = Menu.buildFromTemplate([
+    { label: maizyLine(), enabled: false },
+    onCall
+      ? { label: 'End call', click: () => sendTrayCommand('end-call') }
+      : { label: 'Talk to Maizy', click: () => sendTrayCommand('talk') },
+    {
+      label: 'Listen for “Hey Maizy”',
+      type: 'checkbox',
+      checked: maizyStatus.listenOn,
+      click: () => sendTrayCommand('toggle-listen'),
+    },
+    { type: 'separator' },
     { label: 'Show window', click: showWindow },
     { label: paused ? 'Resume' : 'Pause', click: togglePause },
     {

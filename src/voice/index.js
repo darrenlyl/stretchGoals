@@ -3,6 +3,7 @@
 //   voiceCoach.setMuted(bool)       the voice on/off switch in settings
 //   voiceCoach.setAgentActive(bool) true while a Maizy conversation is open, so only one voice talks
 //   speakLine(lineId)               say one line from lines.js, e.g. speakLine("praise.fixed")
+//   notify(title, body)             desktop notification + the coach reads it aloud (use for EVERY notification)
 import { getLine } from "./lines.js";
 import { STRETCHES, onStretchEvent } from "../stretches/index.js";
 let muted = false;
@@ -70,6 +71,22 @@ export function speakLine(lineId) {
   return say(text);
 }
 
+/**
+ * Show a desktop notification AND read it aloud. Send every notification through here, so the
+ * coach reads them all. While muted or on a call with Maizy, only the notification shows.
+ */
+export function notify(title, body) {
+  globalThis.window?.api?.notify(title, body);
+  return say(body || title);
+}
+
+// The same test as src/notifications.js: the window is hidden, minimised or behind other apps.
+// Outside a window (Node tests) it's never "away".
+function lookingAway() {
+  if (typeof document === "undefined") return false;
+  return document.visibilityState === "hidden" || !document.hasFocus();
+}
+
 /** True while a line is playing or waiting to play. */
 export const isSpeaking = () => queued > 0;
 
@@ -117,7 +134,11 @@ export const RULES = {
     }
   
     if (now - lastLineAt < RULES.anyLineMs) return;
-  
+
+    // Not looking at the app: Shawn's notifier sends a notification and voice.notify reads it
+    // aloud, so the coach's own nudges would say the same thing twice.
+    if (lookingAway()) return;
+
     // 2. Same issue still going a minute after the nudge: offer a stretch, once
     if (warned && issue?.id === warned.id && !warned.offered && now - warned.at >= RULES.offerAfterMs) {
       warned.offered = true;
