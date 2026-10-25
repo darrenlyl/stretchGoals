@@ -665,21 +665,20 @@ body.sg-host {
   grid-template-rows: minmax(0, 1fr);
   grid-template-areas: "welcome maizy";
 }
-/* Calibration, dashboard, stretch: You | Maizy | ring on top, the screen's panel below */
+/* Calibration, dashboard, stretch: You | Maizy | ring on top, the screen's panel below.
+   Every screen uses the same rows, so the camera and Maizy keep their size when you switch tabs
+   (a different split per screen made them jump by up to 80px on every switch). */
 .sg-app:not([data-screen="welcome"]) .sg-grid {
   grid-template-columns: minmax(0, 5fr) minmax(0, 4fr) minmax(0, 3.4fr);
-}
-/* Dashboard: the issues list needs the taller bottom row */
-.sg-app[data-screen="dashboard"] .sg-grid {
   grid-template-rows: minmax(0, 1fr) minmax(0, 1.1fr);
+}
+.sg-app[data-screen="dashboard"] .sg-grid {
   grid-template-areas:
     "cam maizy side"
     "issues issues tip";
 }
-/* Calibration and stretch: you and Maizy get more room, the panel is short */
 .sg-app[data-screen="calibrate"] .sg-grid,
 .sg-app[data-screen="stretch"] .sg-grid {
-  grid-template-rows: minmax(0, 1.5fr) minmax(0, 1fr);
   grid-template-areas:
     "cam maizy side"
     "panel panel panel";
@@ -698,21 +697,15 @@ body.sg-host {
   display: contents;
 }
 
-/* Screen change: the screen's own cards rise in (camera and Maizy stay put) */
+/* Screen change: the screen's own cards settle in with a short fade (camera and Maizy stay put).
+   Opacity only, no rise or stagger: tabs are switched often, so it must feel instant, not reloaded. */
 .sg-screen .sg-card,
 .sg-welcome {
-  animation: sg-enter 0.28s var(--sg-ease-out) both;
-}
-.sg-screen .sg-card:nth-child(2) {
-  animation-delay: 0.04s;
-}
-.sg-screen .sg-card:nth-child(3) {
-  animation-delay: 0.08s;
+  animation: sg-enter 0.15s var(--sg-ease-out) both;
 }
 @keyframes sg-enter {
   from {
-    opacity: 0;
-    transform: translateY(8px);
+    opacity: 0.4;
   }
 }
 
@@ -1311,10 +1304,6 @@ body.sg-host {
 .sg-app[data-stretching="no"] .sg-stretch-live {
   display: none;
 }
-/* The list takes the room it needs, but the top row keeps at least 250px (the list scrolls then) */
-.sg-app[data-screen="stretch"][data-stretching="no"] .sg-grid {
-  grid-template-rows: minmax(250px, 1fr) minmax(0, auto);
-}
 .sg-pick-side {
   grid-area: side;
   display: flex;
@@ -1328,6 +1317,7 @@ body.sg-host {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-height: 0; /* lets the list below scroll inside the row */
 }
 .sg-pick-list {
   list-style: none;
@@ -1719,8 +1709,8 @@ body.sg-host {
   .sg-screen-title {
     font-size: 22px;
   }
-  /* Keep all five posture checks visible on short windows */
-  .sg-app[data-screen="dashboard"] .sg-grid {
+  /* Keep all five posture checks visible on short windows (same rows on every screen, see above) */
+  .sg-app:not([data-screen="welcome"]) .sg-grid {
     grid-template-rows: minmax(0, 1fr) minmax(0, 1.25fr);
   }
   .sg-issues {
