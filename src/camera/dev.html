@@ -10,8 +10,13 @@
     <p id="status">Starting camera…</p>
     <p id="nose"></p>
 
+    <div id="camera-stage">
+        <video id="camera-video" autoplay playsinline muted></video>
+        <canvas id="camera-overlay"></canvas> <!--transparent drawing layer that sits exactly over the video-->
+    </div>
+
     <!-- autoplay + playsinline + muted: start playing on their own, inside the page -->
-    <video id="camera-video" autoplay playsinline muted></video>
+    
 
     <script type="module" src="./dev.js"></script>
   </body>
