@@ -1,4 +1,4 @@
-// Backup stretches for the UI (owner: Claude via Darren).
+// Backup stretches for the UI (owner: Darren).
 //
 // The real stretches live in Joseph's src/stretches/ module. The UI only uses
 // this file when that module is NOT passed to ui.mount(), so the stretch cards

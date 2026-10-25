@@ -121,7 +121,7 @@ export const ISSUE_IDS = Object.freeze(Object.keys(ISSUES));
 //   src/stretches/index.js  Joseph  STRETCHES, stretchesFor(issueId) -> Stretch[], startStretch(id), stopStretch(), onStretchEvent(cb) -> unsubscribe
 //   src/maizy/index.js      Shawn   maizy.mount(el), maizy.update(state), maizy.celebrate(), maizy.setVitality(0–1 | null)
 //   src/debug/fake-posture.js Shawn mountFakePosturePanel(el, onState)
-//   src/ui/index.js         Claude  ui.mount(el), ui.update(state)
+//   src/ui/index.js         Darren  ui.mount(el), ui.update(state)
 
 /**
  * Stretch events from src/stretches.

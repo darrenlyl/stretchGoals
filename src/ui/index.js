@@ -1,5 +1,5 @@
 /**
- * stretchGoals UI screens (owner: Claude via Darren). Plain JS, no framework.
+ * stretchGoals UI screens (owner: Darren). Plain JS, no framework.
  *
  * ─── API ────────────────────────────────────────────────────────────────────
  *   ui.mount(el, services?)  Build every screen inside `el`. Call once. `el` should fill the window.

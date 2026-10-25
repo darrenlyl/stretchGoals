@@ -2,7 +2,7 @@
 
 > A desktop app for Mac and Windows that watches your posture through the laptop camera. It tells you what's off in plain words and by the medical term, then coaches you back with a voice and guided stretches. Maizy, a little blonde girl, slouches when you slouch.
 
-This is the single source of truth for the hackathon. Read it once at kickoff. Then give it to your Claude session so it knows the plan, the rules, and your role.
+This is the single source of truth for the hackathon. Read it once at kickoff. Then give it to your AI assistant so it knows the plan, the rules, and your role.
 
 | Track | Owner | Nickname | Folders you own |
 |---|---|---|---|
@@ -10,10 +10,10 @@ This is the single source of truth for the hackathon. Read it once at kickoff. T
 | 2. Posture Brain | **Darren** | the doctor | `src/posture/`, `src/shared/` |
 | 3. Voice Coach & Stretches | **Joseph** | the coach | `src/voice/`, `src/stretches/` |
 | 4. Desktop App & Maizy | **Shawn** | the body | `src/main.js`, `src/preload.js`, `src/app.js`, `src/notifications.js`, `src/maizy/`, `src/debug/`, `forge.config.mjs` |
-| UI screens | **Claude** (run from Darren's session) | the face | `src/ui/` |
+| UI screens | **Darren** | the face | `src/ui/` |
 
 **Contents**
-0. [Notes for Claude](#0-notes-for-claude)
+0. [Notes for your AI assistant](#0-notes-for-your-ai-assistant)
 1. [The vision](#1-the-vision)
 2. [How the pieces fit together](#2-how-the-pieces-fit-together)
 3. [Shared contracts](#3-shared-contracts-the-most-important-section)
@@ -26,12 +26,12 @@ This is the single source of truth for the hackathon. Read it once at kickoff. T
 
 ---
 
-## 0. Notes for Claude
+## 0. Notes for your AI assistant
 
-**Teammates:** open Claude Code in this repo and start with:
+**Teammates:** open your AI coding assistant in this repo and start with:
 > Read TEAM_GUIDE.md. I'm **<your name>** and I own **Track <n>**. Help me get started.
 
-**Claude, here is how to help:**
+**Assistant, here is how to help:**
 
 - **Who you're helping.** This is a team of four people with little coding experience, at a 24-hour hackathon. They want to *learn* and they also need to *ship*. Act like a patient senior teammate. If you don't know which teammate you're talking to, ask.
 - **Teach by default.**
@@ -47,7 +47,7 @@ This is the single source of truth for the hackathon. Read it once at kickoff. T
 - **Stay in their lane.**
   - Only edit the folders their track owns (table above).
   - Don't edit other tracks' folders.
-  - Don't edit `src/ui/`, which a separate Claude session builds for Darren.
+  - Don't edit `src/ui/`, which Darren owns.
   - Don't edit `src/shared/contracts.js`, which Darren owns.
   - If a contract change seems necessary, write up the proposed change and ask the human to raise it with the team.
 - **Code exactly to the contracts in Section 3.** That means the same field names, issue IDs, and function names. Until another track's real module exists, build against fake data.
@@ -127,7 +127,7 @@ await startCamera(document.querySelector("#camera-video"), document.querySelecto
 
 onPoseFrame((frame) => {
   const state = analyze(frame);      // Darren
-  ui.update(state);                  // Claude
+  ui.update(state);                  // Darren
   maizy.update(state);               // Shawn
   voiceCoach.update(state);          // Joseph
   window.api.setTrayScore(state.score);
@@ -227,7 +227,7 @@ These IDs connect everything:
 | `src/stretches/index.js` | Joseph | `STRETCHES` (data array), `stretchesFor(issueId) → Stretch[]`, `startStretch(id)`, `stopStretch()`, `onStretchEvent(cb) → unsubscribe` |
 | `src/maizy/index.js` | Shawn | `maizy.mount(el)`, `maizy.update(state)`, `maizy.celebrate()`, `maizy.setVitality(0–1 \| null)` |
 | `src/debug/fake-posture.js` | Shawn | `mountFakePosturePanel(el, onState)`: sliders and checkboxes that emit fake `PostureState`s |
-| `src/ui/index.js` | Claude | `ui.mount(el)`, `ui.update(state)` |
+| `src/ui/index.js` | Darren | `ui.mount(el)`, `ui.update(state)` |
 
 Stretch events: `{ type: "start" | "step" | "tick" | "end", stretchId, stepIndex, secondsLeft }`.
 
@@ -265,7 +265,7 @@ window.api.onTrayCommand(cb)   // cb("pause" | "resume" | "recalibrate" | "show"
 ### Everyone installs (hour 0)
 - **Node.js 20 or newer** (LTS). Check with `node -v`.
 - **Git**, plus access to the GitHub repo.
-- **VS Code** (or any editor) and **Claude Code**.
+- **VS Code** (or any editor) and an AI coding assistant.
 
 ### Hour 0 setup, by person
 
@@ -323,7 +323,7 @@ stretchGoals/
     ├── stretches/           ← Joseph   (index.js, dev.html)
     ├── maizy/               ← Shawn    (index.js, maizy.css, dev.html, maizy-strip.webp)
     ├── debug/               ← Shawn    (fake-posture.js)
-    └── ui/                  ← Claude via Darren
+    └── ui/                  ← Darren
 ```
 
 The Forge template may name some files differently, for example `renderer.js` instead of `app.js`. Shawn updates this tree to match.
@@ -355,13 +355,13 @@ The Forge template may name some files differently, for example `renderer.js` in
 ### Communication
 - **Standup every 2 hours, 5 minutes max.** Each person covers what's done, what's next, and whether they're blocked.
 - **Stuck for 20–30 minutes?**
-  1. Ask Claude for a fuller answer.
+  1. Ask your AI assistant for a fuller answer.
   2. Still stuck after another 15 minutes? Ask a teammate.
   3. Don't suffer silently.
 - **Contract changes** go through the group chat (see 3.6).
 
 ### Learning
-This is a learning hackathon. When Claude gives you code, make sure you can explain each part. At each standup, take 30 seconds to share one thing you learned. By the end, everyone should be able to explain the whole pipeline.
+This is a learning hackathon. When your AI assistant gives you code, make sure you can explain each part. At each standup, take 30 seconds to share one thing you learned. By the end, everyone should be able to explain the whole pipeline.
 
 ---
 
@@ -763,9 +763,9 @@ She moves up a frame as soon as the score reaches the next band, but only moves 
 
 ---
 
-### UI screens: Claude (via Darren)
+### UI screens: Darren
 
-Claude builds `src/ui/` from Darren's session. Other Claude sessions should not edit it. The UI covers:
+Darren owns `src/ui/`. Nobody else should edit it. The UI covers:
 - **Welcome / camera permission screen.**
 - **Calibration screen:** "sit up tall" instructions and a progress ring driven by `calibrationProgress`.
 - **Live dashboard:**
