@@ -25,3 +25,10 @@ const samples = [
   computeMetrics(makeFakeFrame({ neckDrop: 0.6 })),   // glitchy frame
 ];
 console.log("baseline:", computeBaseline(samples));
+
+import { calibrate } from "./calibration.js";
+const upright = Array.from({ length: 30 }, () => makeFakeFrame());
+const empty = Array.from({ length: 30 }, () => ({ timestamp: 0, width: 640, height: 480, landmarks: null }));
+console.log("upright:", calibrate(upright).ok);
+console.log("empty:", calibrate(empty).reason);
+console.log("too few:", calibrate(upright.slice(0, 3)).reason);
