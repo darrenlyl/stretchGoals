@@ -1,6 +1,7 @@
 // Window entry point. Connects all the modules (TEAM_GUIDE.md Section 2).
 import './index.css';
 import { maizy } from './maizy/index.js';
+import { postureNotifier } from './notifications.js';
 
 console.log('stretchGoals renderer loaded');
 
@@ -40,12 +41,19 @@ function cameraErrorMessage(err) {
 
 showCamera();
 
-// Dev only: the fake posture panel drives Maizy and the tray until real modules are wired (Job 6).
+// Tray Pause/Resume also pauses notifications.
+window.api?.onTrayCommand((command) => {
+  if (command === 'pause') postureNotifier.setPaused(true);
+  if (command === 'resume') postureNotifier.setPaused(false);
+});
+
+// Dev only: the fake posture panel drives Maizy, the tray and notifications until real modules are wired (Job 6).
 if (import.meta.env.DEV && window.api) {
   import('./debug/fake-posture.js').then(({ mountFakePosturePanel }) => {
     mountFakePosturePanel(document.querySelector('#debug-panel'), (state) => {
       maizy.update(state);
       window.api.setTrayScore(state.score);
+      postureNotifier.update(state);
     });
   });
   window.api.onTrayCommand((command) => console.log('Tray command:', command));

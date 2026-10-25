@@ -135,7 +135,10 @@ ipcMain.handle('tts', async (_event, text) => {
 // notify(title, body): desktop notification.
 ipcMain.on('notify', (_event, title, body) => {
   if (!Notification.isSupported()) return;
-  new Notification({ title: String(title), body: String(body ?? '') }).show();
+  const notification = new Notification({ title: String(title), body: String(body ?? '') });
+  // Clicking the notification opens the app
+  notification.on('click', showWindow);
+  notification.show();
 });
 
 // setTrayScore(score): update the number in the tray.

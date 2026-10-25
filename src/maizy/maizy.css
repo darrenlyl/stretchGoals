@@ -2,7 +2,7 @@
    No background, so she works on light and dark pages. */
 
 .maizy {
-  --m-warn: oklch(0.83 0.14 75); /* amber = an issue has lasted */
+  --m-warn: oklch(0.63 0.24 27); /* red = an issue has lasted */
 
   position: relative;
   width: 100%;
@@ -31,7 +31,7 @@
   filter: drop-shadow(0 0 3px rgba(255, 214, 102, 0.9));
 }
 
-/* An issue has lasted: an amber outline glow around her */
+/* An issue has lasted: a red outline glow around her */
 .maizy.is-warn .m-body {
   filter: drop-shadow(0 0 4px var(--m-warn)) drop-shadow(0 0 8px var(--m-warn)) !important;
 }
