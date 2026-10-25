@@ -16,6 +16,7 @@ import { createWakeWord } from './voice/wake-word.js';
 
 let paused = false;
 let useFake = false; // dev only: the fake posture panel drives the app instead of the camera
+let cameraLive = false; // true once the camera has sent a frame (the UI's Start button turned it on)
 let voiceOn = true;
 let heyMaizyOn = readSetting('maizy.heyMaizy', true);
 
@@ -109,6 +110,7 @@ function handleState(state) {
 
 // Real pipeline: ~10 PoseFrames a second from the camera, judged by the posture brain.
 camera.onPoseFrame((frame) => {
+  cameraLive = true;
   if (paused || useFake) return;
   handleState(worstFirst(posture.analyze(frame)));
 });
@@ -117,6 +119,7 @@ camera.onPoseFrame((frame) => {
 ui.onPauseChange((value) => {
   paused = value;
   postureNotifier.setPaused(value);
+  window.api?.setPaused(value); // the tray's Pause/Resume item follows
   updateAutoWake();
   if (paused) agent.end();
   syncListening();
@@ -124,7 +127,10 @@ ui.onPauseChange((value) => {
 window.api?.onTrayCommand((command) => {
   if (command === 'pause') ui.setPaused(true);
   if (command === 'resume') ui.setPaused(false);
-  if (command === 'recalibrate') ui.showScreen('calibrate');
+  if (command === 'recalibrate' && cameraLive) {
+    posture.resetCalibration(); // same as Settings > Recalibrate: forget the old baseline first
+    ui.showScreen('calibrate');
+  }
   if (command === 'talk') agent.start('talk');
   if (command === 'end-call') agent.end();
   if (command === 'toggle-listen') toggleListening();

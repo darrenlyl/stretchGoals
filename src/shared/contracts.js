@@ -139,6 +139,7 @@ export const ISSUE_IDS = Object.freeze(Object.keys(ISSUES));
 //   window.api.maizySignedUrl()     -> Promise<string>, a short-lived link for one call with Maizy (key stays in main)
 //   window.api.setTrayScore(score)  number, or null to show "–"
 //   window.api.setMaizyStatus(s)    { call, wake, listenOn }: the Maizy dot and menu items in the tray
+//   window.api.setPaused(bool)      the window paused or resumed itself, so the tray's Pause/Resume item matches
 //   window.api.onTrayCommand(cb)    cb("pause" | "resume" | "recalibrate" | "show" | "talk" | "end-call" | "toggle-listen")
 
 /** A PostureState for "nothing to report yet". Handy as a starting value. */

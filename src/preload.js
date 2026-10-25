@@ -13,6 +13,9 @@ contextBridge.exposeInMainWorld('api', {
   // { call, wake, listenOn }: drives the Maizy dot and menu items in the tray.
   setMaizyStatus: (status) => ipcRenderer.send('set-maizy-status', status),
 
+  // true/false when the window pauses or resumes itself, so the tray's Pause/Resume item matches.
+  setPaused: (paused) => ipcRenderer.send('set-paused', paused),
+
   // score is a number, or null to show "–".
   setTrayScore: (score) => ipcRenderer.send('set-tray-score', score),
 

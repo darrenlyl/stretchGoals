@@ -21,11 +21,14 @@ if (started) {
 
 // Only one copy at a time: two would fight over the camera, the mic and the saved data.
 // A second launch just brings the first one's window forward.
-if (!app.requestSingleInstanceLock()) {
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) {
   app.quit();
 } else {
   app.on('second-instance', () => showWindow());
 }
+// A copy that is about to quit (second launch, Squirrel installer event) must not open a window or tray first.
+const exiting = started || !gotLock;
 
 // Load secrets from .env. Only the main process can see them.
 // npm start uses the project's .env. The packaged app uses one in its data folder
@@ -81,6 +84,8 @@ const createWindow = () => {
 };
 
 app.whenReady().then(async () => {
+  if (exiting) return;
+
   // Mac asks for camera permission. Windows uses its Settings instead.
   if (process.platform === 'darwin') {
     const allowed = await systemPreferences.askForMediaAccess('camera');
@@ -206,6 +211,14 @@ ipcMain.on('set-maizy-status', (_event, status) => {
     updateTrayScore();
     updateTrayMenu();
   }
+});
+
+// setPaused(paused): the window paused or resumed itself (its own button), so the tray menu follows.
+ipcMain.on('set-paused', (_event, value) => {
+  const next = Boolean(value);
+  if (next === paused) return;
+  paused = next;
+  if (tray) updateTrayMenu();
 });
 
 // Sends 'pause' | 'resume' | 'recalibrate' | 'show' | 'talk' | 'end-call' | 'toggle-listen' to the window.
