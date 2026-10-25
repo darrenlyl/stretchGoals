@@ -28,9 +28,13 @@ export function computeMetrics(frame){
     const W = Math.hypot(rightShoulder.x - leftShoulder.x, leftShoulder.y - rightShoulder.y);    
     const neckRatio = (S.y - E.y) / W; 
 
+    const headWidth = Math.hypot(headLeft.x - headRight.x, headLeft.y - headRight.y);
+    const headRatio = headWidth / W;
+    const shoulderWidth = W / frame.width;
+    const shoulderY = S.y / frame.height;
+
     const DEG = 180 / Math.PI;
     const headTiltDeg = Math.atan2(headLeft.y - headRight.y, headLeft.x - headRight.x) * DEG;
     const shoulderTiltDeg = Math.atan2(leftShoulder.y - rightShoulder.y, leftShoulder.x - rightShoulder.x) * DEG
 
-    return { neckRatio, headTiltDeg, shoulderTiltDeg };
-}
+    return { neckRatio, headRatio, headTiltDeg, shoulderTiltDeg, shoulderWidth, shoulderY };}
