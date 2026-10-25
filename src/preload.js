@@ -10,6 +10,9 @@ contextBridge.exposeInMainWorld('api', {
   // Returns a Promise of a signed URL for one call with Maizy (the API key stays in main).
   maizySignedUrl: () => ipcRenderer.invoke('maizy-signed-url'),
 
+  // { personId, conditions, cleared } -> Promise<{ allowed, cautions, source }>: which stretches suit them (IndyKite).
+  safetyCheck: (selection) => ipcRenderer.invoke('safety-check', selection),
+
   // { call, wake, listenOn }: drives the Maizy dot and menu items in the tray.
   setMaizyStatus: (status) => ipcRenderer.send('set-maizy-status', status),
 

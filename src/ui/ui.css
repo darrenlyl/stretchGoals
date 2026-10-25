@@ -1598,6 +1598,33 @@ body.sg-host {
   color: var(--sg-ink-2);
 }
 
+/* Health check: one tick box per condition, "cleared" indented under the one it belongs to */
+.sg-health-list {
+  display: grid;
+  gap: 2px;
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.sg-health-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 13.5px;
+  cursor: pointer;
+}
+.sg-health-item input {
+  flex: none;
+  margin: 2px 0 0;
+  accent-color: var(--sg-accent);
+}
+.sg-health-cleared {
+  margin-left: 24px;
+  color: var(--sg-ink-2);
+  font-size: 12.5px;
+}
+
 /* Voice switch */
 .sg-switch {
   appearance: none;

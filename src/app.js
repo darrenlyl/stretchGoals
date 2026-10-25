@@ -12,6 +12,7 @@ import { maizy } from './maizy/index.js';
 import { postureNotifier } from './notifications.js';
 import { createMaizyAgent } from './voice/agent/maizy-agent.js';
 import { createAppControls } from './voice/agent/app-controls.js';
+import { createSafety } from './safety.js';
 import { createWakeWord } from './voice/wake-word.js';
 
 let paused = false;
@@ -25,7 +26,12 @@ let heyMaizyOn = readSetting('maizy.heyMaizy', true);
 // ---------------------------------------------------------------------------
 
 const canCall = Boolean(window.api?.maizySignedUrl); // only inside Electron, where the API key lives
+// Health check (Settings): only stretches that suit their conditions, decided by IndyKite.
+// Everything below gets safety.stretches, never the unfiltered list.
+const safety = createSafety(stretches);
+
 const agent = createMaizyAgent({
+  safety,
   Conversation,
   getSignedUrl: () => window.api.maizySignedUrl(),
   controls: createAppControls(document.querySelector('#app')), // "can you start the camera?"
@@ -95,7 +101,7 @@ const voiceForUi = {
 // ---------------------------------------------------------------------------
 
 // The UI builds every screen, including the camera and Maizy's slot. Its Start button calls camera.startCamera().
-ui.mount(document.querySelector('#app'), { camera, posture, voice: voiceForUi, stretches });
+ui.mount(document.querySelector('#app'), { camera, posture, voice: voiceForUi, stretches: safety.stretches, safety });
 maizy.mount(document.querySelector('#maizy'));
 
 // Every PostureState goes to everyone who reacts to posture.

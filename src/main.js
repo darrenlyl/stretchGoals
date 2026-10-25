@@ -13,6 +13,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
 import { TRAY_ICON_16, TRAY_ICON_32 } from './tray-icon.js';
+import { checkSafety } from './safety-check.js';
+import { TOKEN_FILES } from '../indykite/ik.mjs';
 
 // Windows installer shortcut handling.
 if (started) {
@@ -106,6 +108,12 @@ app.whenReady().then(async () => {
   // Mac: clicking the dock icon brings the hidden window back.
   app.on('activate', showWindow);
 });
+
+// safetyCheck({ personId, conditions, cleared }): which stretches suit them, asked of IndyKite
+// (src/safety-check.js). The IndyKite key stays here. The packaged app keeps it in its data folder:
+// ~/Library/Application Support/stretchGoals/.secrets/app-agent-credential.json
+TOKEN_FILES.push(path.join(app.getPath('userData'), '.secrets', 'app-agent-credential.json'));
+ipcMain.handle('safety-check', (_event, selection) => checkSafety(selection));
 
 // maizySignedUrl(): a short-lived link (about 15 minutes, this agent only) for one call with Maizy.
 // The API key stays here; the window only ever sees the link.

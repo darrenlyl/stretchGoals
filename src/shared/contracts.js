@@ -137,6 +137,7 @@ export const ISSUE_IDS = Object.freeze(Object.keys(ISSUES));
 //   window.api.tts(text)            -> Promise<Uint8Array> of mp3 bytes (key stays in the main process)
 //   window.api.notify(title, body)  native desktop notification (call voice.notify instead, so it is also read aloud)
 //   window.api.maizySignedUrl()     -> Promise<string>, a short-lived link for one call with Maizy (key stays in main)
+//   window.api.safetyCheck(sel)     { personId, conditions, cleared } -> Promise<{ allowed, cautions, source }> (IndyKite)
 //   window.api.setTrayScore(score)  number, or null to show "–"
 //   window.api.setMaizyStatus(s)    { call, wake, listenOn }: the Maizy dot and menu items in the tray
 //   window.api.setPaused(bool)      the window paused or resumed itself, so the tray's Pause/Resume item matches

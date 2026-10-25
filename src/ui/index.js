@@ -208,15 +208,22 @@ function stretchSeconds(s) {
   return total || null;
 }
 
-/** The first stretch that helps this issue, or a general one when there's no issue. */
+/**
+ * The first stretch that helps this issue, or a general one when there's no issue.
+ * With a health check (services.safety) it only picks from the stretches that suit them, and
+ * returns null when none do; it never falls back to the built-in list, which isn't filtered.
+ */
 function stretchFor(issueId) {
   if (issueId) {
     const list = safeCall(stretches?.stretchesFor, issueId);
     if (Array.isArray(list) && list.length) return list[0];
+    if (services.safety) return null; // every stretch for this issue is ruled out: don't swap in an unrelated one
     const backup = FALLBACK_STRETCHES.find((s) => s.helps.includes(issueId));
     if (backup) return findStretch(backup.id);
   }
-  return findStretch('shoulder_rolls');
+  if (!services.safety) return findStretch('shoulder_rolls');
+  const all = allStretches();
+  return all.find((s) => s.id === 'shoulder_rolls') ?? all[0] ?? null;
 }
 
 /** "12 s", "3 min 20 s", "2 h 05 min": how long an issue has lasted. */
@@ -546,6 +553,16 @@ const TEMPLATE = `
         <button type="button" class="sg-btn sg-btn-secondary" data-ref="recalibrateBtn">Recalibrate</button>
       </div>
       <p class="sg-setting-desc">Sit up tall again to reset what “good posture” means for you.</p>
+    </div>
+
+    <div class="sg-setting sg-health" data-ref="healthSetting" hidden>
+      <div class="sg-setting-row">
+        <span class="sg-setting-title" id="sg-health-title">Health check</span>
+        <span class="sg-setting-value" data-ref="healthStatus"></span>
+      </div>
+      <p class="sg-setting-desc">Tick anything that applies, so we only suggest stretches that suit you. It's optional. Only an anonymous ID and what you tick are sent to IndyKite, which decides; never your name, email or video.</p>
+      <ul class="sg-health-list" data-ref="healthList" aria-labelledby="sg-health-title"></ul>
+      <p class="sg-setting-desc" data-ref="healthSource"></p>
     </div>
 
     <div class="sg-setting sg-setting-keys">
@@ -1152,6 +1169,19 @@ function renderTip(worstIssue) {
   const stretch = stretchFor(issueId);
   suggested = { key, stretch };
 
+  // Their health check rules out every stretch that would fit: say so instead of suggesting one
+  show(refs.tipStart, Boolean(stretch));
+  if (!stretch) {
+    setText(refs.tipLabel, 'Suggested stretch');
+    setText(refs.tipName, 'No stretch for now');
+    refs.tipName.title = '';
+    setText(refs.tipFor, issueId ? `For: ${ISSUES[issueId].layman.toLowerCase()}` : '');
+    setText(refs.tipHow, 'Your health check rules these stretches out. A doctor or physio can suggest ones that suit you.');
+    for (const ref of [refs.tipTime, refs.tipSteps, refs.tipHold]) setText(ref, '-');
+    refs.tipStepList.replaceChildren();
+    return;
+  }
+
   setText(refs.tipLabel, issueId ? 'Suggested stretch' : 'Quick reset');
   setText(refs.tipName, stretchName(stretch));
   refs.tipName.title = stretchName(stretch); // the full name, if it's cut to two lines
@@ -1512,6 +1542,72 @@ function addFonts() {
   }
 }
 
+// ─── Health check (Settings) ────────────────────────────────────────────────
+
+/**
+ * One tick box per condition (services.safety.CONDITIONS). "Ask first" conditions get a second
+ * box, "A doctor or physio has cleared me", shown while the condition is ticked. Every change is
+ * saved and re-checked with IndyKite; the dashboard's suggested stretch follows the answer.
+ */
+function buildHealthCheck(safety) {
+  show(refs.healthSetting, true);
+  const boxes = {}; // condition id -> { has, cleared? }
+  const { conditions, cleared } = safety.get();
+
+  const box = (label, checked) => {
+    const wrap = document.createElement('label');
+    wrap.className = 'sg-health-item';
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.checked = checked;
+    const text = document.createElement('span');
+    text.textContent = label;
+    wrap.append(input, text);
+    return { wrap, input };
+  };
+
+  const save = () => {
+    const ticked = Object.keys(boxes).filter((id) => boxes[id].has.input.checked);
+    const ok = ticked.filter((id) => boxes[id].cleared?.input.checked);
+    for (const { has, cleared: ok } of Object.values(boxes)) if (ok) show(ok.wrap, has.input.checked);
+    safety.set({ conditions: ticked, cleared: ok });
+  };
+
+  refs.healthList.replaceChildren(
+    ...safety.CONDITIONS.map((c) => {
+      const li = document.createElement('li');
+      const has = box(c.label, conditions.includes(c.id));
+      has.input.addEventListener('change', save);
+      li.append(has.wrap);
+      boxes[c.id] = { has };
+      if (c.level === 'ask_first') {
+        const ok = box('A doctor or physio has cleared me', cleared.includes(c.id));
+        ok.wrap.classList.add('sg-health-cleared');
+        ok.input.addEventListener('change', save);
+        show(ok.wrap, has.input.checked);
+        li.append(ok.wrap);
+        boxes[c.id].cleared = ok;
+      }
+      return li;
+    }),
+  );
+
+  const renderStatus = (s) => {
+    setText(refs.healthStatus, s.source === 'checking' ? 'Checking…' : `${s.allowed} of ${s.total} stretches suit you`);
+    setText(
+      refs.healthSource,
+      s.source === 'indykite'
+        ? 'Checked by IndyKite.'
+        : s.source === 'local'
+          ? "Checked on this computer (IndyKite couldn't be reached)."
+          : '',
+    );
+    suggested = null; // pick the suggested stretch again with the new answer
+  };
+  safety.onChange(renderStatus);
+  renderStatus(safety.status());
+}
+
 function mount(el, givenServices = {}) {
   if (root) {
     console.warn('[ui] ui.mount() was called twice; ignoring the second call.');
@@ -1592,6 +1688,7 @@ function mount(el, givenServices = {}) {
     applyOverlay();
   });
   refs.cameraPick.addEventListener('change', onCameraPick);
+  if (services.safety) buildHealthCheck(services.safety);
   refs.sensitivity.addEventListener('input', () => {
     settings.sensitivity = clamp01(refs.sensitivity.value);
     saveSettings();

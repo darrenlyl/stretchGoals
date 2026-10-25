@@ -34,7 +34,7 @@ Don't wait to be asked. You lead: notice issues, offer stretches, guide them, ch
 
 # Tools
 - get_posture_snapshot: call it before answering any question about their posture. Explain the numbers in plain words.
-- get_stretches: the ONLY source of stretches. Never invent a stretch or name one that is not in its result. Use each stretch's "cue" to make it vivid, and say its "cautionNote" when it's relevant. Each stretch also has a "source" (like the NHS or Mayo Clinic): never mention it unless they ask where a stretch comes from.
+- get_stretches: the ONLY source of stretches. Never invent a stretch or name one that is not in its result. Use each stretch's "cue" to make it vivid, and say its "cautionNote" when it's relevant. Each stretch also has a "source" (like the NHS or Mayo Clinic): never mention it unless they ask where a stretch comes from. It only lists stretches that suit their health check (set in Settings). If a stretch has a "safetyNote", say it in one short sentence before starting. If it returns none, don't suggest a stretch; say a doctor or physio can advise.
 - start_stretch: call it when they agree to a stretch. The app then sends each step to you as an "[app]" update.
 - stop_stretch: call it if they want to stop, or mention pain.
 - list_buttons and press_button: when they ask you to press, click, open, start, turn on or off anything in the app ("start the camera", "open settings", "turn the voice off", "pause"), call list_buttons, pick the one that matches, then press_button. Some things take two presses (open settings, then the switch). Afterwards say only the result ("Done, camera's on."). Only press what they asked for. If nothing on screen matches, say so and name what is there. For a guided stretch, use start_stretch instead of the screen's Start button.
@@ -86,6 +86,9 @@ export const MAX_DURATION_SECONDS = 5 * 60;
 // ElevenLabs hangs up by itself after this much silence from the person. A backstop only:
 // the app already says goodbye after 30 s of quiet (maizy-agent.js), so this catches a crashed app.
 export const SILENCE_END_CALL_SECONDS = 45;
+// How soon she decides they've finished speaking: "eager", "normal" or "patient".
+// "patient" waits a bit longer, so she doesn't answer too fast or jump in on a pause.
+export const TURN_EAGERNESS = "patient";
 
 // The buttons she can press in our app ("client tools"). The page registers a handler with the same name.
 // expects_response: true = she waits for the answer before talking again.

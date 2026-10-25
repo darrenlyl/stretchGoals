@@ -5,7 +5,7 @@
 // A call ends when they say goodbye, after CALL_RULES.quietHangUpSec of silence, or at the
 // 5-minute cap set in maizy-config.mjs.
 //
-//   const agent = createMaizyAgent({ Conversation, getSignedUrl, controls, onLog });
+//   const agent = createMaizyAgent({ Conversation, getSignedUrl, controls, safety, onLog });
 //   agent.update(state)       every PostureState (~10 times a second)
 //   agent.start(reason, { heardAt })  "wake_word" | "talk"; heardAt = when "Hey Maizy" was heard, for timing
 //   agent.warmUp()            keep a signed URL ready so calls start faster (free)
@@ -17,6 +17,7 @@
 // Conversation is the class from @elevenlabs/client, passed in so the app can use the npm
 // package and the test page a CDN copy. getSignedUrl() returns a URL from ElevenLabs.
 // controls (app-controls.js) lets her press the app's buttons when asked; leave it out where there are none.
+// safety (src/safety.js) limits her to stretches that suit their health check, with caution notes.
 import { ISSUES } from "../../shared/contracts.js";
 import * as stretches from "../../stretches/index.js";
 
@@ -71,7 +72,8 @@ function countAutoWake() {
   }
 }
 
-export function createMaizyAgent({ Conversation, getSignedUrl, controls = null, onLog = () => {} }) {
+export function createMaizyAgent({ Conversation, getSignedUrl, controls = null, safety = null, onLog = () => {} }) {
+  const allowedStretches = safety?.stretches ?? stretches; // filtered by their health check when there is one
   let conversation = null;
   let status = "idle";
   let reason = null;
@@ -262,19 +264,22 @@ export function createMaizyAgent({ Conversation, getSignedUrl, controls = null, 
 
     get_stretches: ({ issue_id } = {}) => {
       onLog("tool", `get_stretches ${issue_id ?? ""}`);
-      const list = issue_id ? stretches.stretchesFor(issue_id) : stretches.STRETCHES;
+      // Only stretches that suit their health check; safetyNote = what their conditions say to watch for
+      const list = issue_id ? allowedStretches.stretchesFor(issue_id) : allowedStretches.STRETCHES;
+      if (!list.length) return JSON.stringify({ stretches: [], reason: "None suit their health check right now. Don't suggest one; say a clinician can advise." });
       return JSON.stringify(
         list.map(({ id, name, how, cue, reps, bothSides, cautionNote, helps, source }) => ({
           id, name, how, cue, reps, bothSides, cautionNote, helps, source: source.name,
+          ...(safety?.notesFor(id).length && { safetyNote: safety.notesFor(id).join(" ") }),
         })),
       );
     },
 
     start_stretch: ({ stretch_id }) => {
       onLog("tool", `start_stretch ${stretch_id}`);
-      const stretch = stretches.STRETCHES.find((s) => s.id === stretch_id);
-      if (!stretch) return JSON.stringify({ started: false, reason: "No stretch with that id. Use get_stretches." });
-      stretches.startStretch(stretch_id);
+      const stretch = allowedStretches.STRETCHES.find((s) => s.id === stretch_id);
+      if (!stretch) return JSON.stringify({ started: false, reason: "Not available: unknown, or it doesn't suit their health check. Use get_stretches." });
+      allowedStretches.startStretch(stretch_id);
       return JSON.stringify({ started: true, name: stretch.name, steps: stretch.steps.length });
     },
 
