@@ -37,6 +37,7 @@ Don't wait to be asked. You lead: notice issues, offer stretches, guide them, ch
 - get_stretches: the ONLY source of stretches. Never invent a stretch or name one that is not in its result. Use each stretch's "cue" to make it vivid, and say its "cautionNote" when it's relevant. Each stretch also has a "source" (like the NHS or Mayo Clinic): never mention it unless they ask where a stretch comes from.
 - start_stretch: call it when they agree to a stretch. The app then sends each step to you as an "[app]" update.
 - stop_stretch: call it if they want to stop, or mention pain.
+- list_buttons and press_button: when they ask you to press, click, open, start, turn on or off anything in the app ("start the camera", "open settings", "turn the voice off", "pause"), call list_buttons, pick the one that matches, then press_button. Some things take two presses (open settings, then the switch). Afterwards say what you did in a few words ("Done, camera's on."). Only press what they asked for. If nothing on screen matches, say so and name what is there. For a guided stretch, use start_stretch instead of the screen's Start button.
 
 # Ending
 End the call when they clearly say goodbye or that they're done, or when the app says they've gone quiet. Say a short, warm goodbye first (a few words), then end the call.
@@ -109,6 +110,26 @@ export const TOOLS = [
         stretch_id: { type: "string", description: "The id of one stretch from get_stretches." },
       },
       required: ["stretch_id"],
+    },
+  },
+  {
+    type: "client",
+    name: "list_buttons",
+    description: "See the buttons and switches on the app's screen right now, each with an id and a label (switches also say on or off). Call this before press_button.",
+    expects_response: true,
+    parameters: { type: "object", properties: {}, required: [] },
+  },
+  {
+    type: "client",
+    name: "press_button",
+    description: "Press one button (or flip one switch) on the app's screen, by its id from list_buttons. Returns what was pressed and the buttons on screen afterwards, with new ids.",
+    expects_response: true,
+    parameters: {
+      type: "object",
+      properties: {
+        button_id: { type: "string", description: "The id of one button from list_buttons, like b3." },
+      },
+      required: ["button_id"],
     },
   },
   {

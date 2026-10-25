@@ -5,7 +5,7 @@
 // A call ends when they say goodbye, after CALL_RULES.quietHangUpSec of silence, or at the
 // 5-minute cap set in maizy-config.mjs.
 //
-//   const agent = createMaizyAgent({ Conversation, getSignedUrl, onLog });
+//   const agent = createMaizyAgent({ Conversation, getSignedUrl, controls, onLog });
 //   agent.update(state)       every PostureState (~10 times a second)
 //   agent.start(reason, { heardAt })  "wake_word" | "talk"; heardAt = when "Hey Maizy" was heard, for timing
 //   agent.warmUp()            keep a signed URL ready so calls start faster (free)
@@ -16,6 +16,7 @@
 //
 // Conversation is the class from @elevenlabs/client, passed in so the app can use the npm
 // package and the test page a CDN copy. getSignedUrl() returns a URL from ElevenLabs.
+// controls (app-controls.js) lets her press the app's buttons when asked; leave it out where there are none.
 import { ISSUES } from "../../shared/contracts.js";
 import * as stretches from "../../stretches/index.js";
 
@@ -66,7 +67,7 @@ function countAutoWake() {
   }
 }
 
-export function createMaizyAgent({ Conversation, getSignedUrl, onLog = () => {} }) {
+export function createMaizyAgent({ Conversation, getSignedUrl, controls = null, onLog = () => {} }) {
   let conversation = null;
   let status = "idle";
   let reason = null;
@@ -260,6 +261,21 @@ export function createMaizyAgent({ Conversation, getSignedUrl, onLog = () => {} 
       onLog("tool", "stop_stretch");
       stretches.stopStretch();
       return JSON.stringify({ stopped: true });
+    },
+
+    // Pressing the app's buttons for them (app-controls.js). The test page has none to press.
+    list_buttons: () => {
+      onLog("tool", "list_buttons");
+      if (!controls) return JSON.stringify({ available: false, reason: "No app screen here." });
+      return JSON.stringify(controls.list());
+    },
+
+    press_button: async ({ button_id }) => {
+      if (!controls) return JSON.stringify({ pressed: false, reason: "No app screen here." });
+      const result = await controls.press(button_id);
+      onLog("tool", `press_button ${button_id} (${result.pressed || "nothing"})`);
+      lastActivityAt = Date.now(); // waiting on a button isn't the person going quiet
+      return JSON.stringify(result);
     },
   };
 

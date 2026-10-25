@@ -11,6 +11,7 @@ import { ui } from './ui/index.js';
 import { maizy } from './maizy/index.js';
 import { postureNotifier } from './notifications.js';
 import { createMaizyAgent } from './voice/agent/maizy-agent.js';
+import { createAppControls } from './voice/agent/app-controls.js';
 import { createWakeWord } from './voice/wake-word.js';
 
 let paused = false;
@@ -26,6 +27,7 @@ const canCall = Boolean(window.api?.maizySignedUrl); // only inside Electron, wh
 const agent = createMaizyAgent({
   Conversation,
   getSignedUrl: () => window.api.maizySignedUrl(),
+  controls: createAppControls(document.querySelector('#app')), // "can you start the camera?"
   onLog: (kind, text) => console.log(`[maizy] ${kind}: ${text}`),
 });
 const wake = createWakeWord({
