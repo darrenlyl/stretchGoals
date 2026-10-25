@@ -38,8 +38,15 @@ const base = calibrate(upright).baseline;
 console.log("sev upright:", computeSeverities(computeMetrics(makeFakeFrame()), base));
 console.log("sev head down:", computeSeverities(computeMetrics(makeFakeFrame({ neckDrop: 0.2 })), base));
 
-import { analyze, setBaseline } from "./index.js";
+import { analyze, startCalibration } from "./index.js";
 console.log("before calibrating:", analyze(makeFakeFrame()).score);
-setBaseline(base);
-console.log("upright:", analyze(makeFakeFrame()).score, analyze(makeFakeFrame()).issues);
-console.log("head down:", analyze(makeFakeFrame({ neckDrop: 0.2 })).score, analyze(makeFakeFrame({ neckDrop: 0.2 })).issues);
+const done = startCalibration(3000);
+for (let t = 0; t <= 3000; t += 100) {
+  const frame = makeFakeFrame();
+  frame.timestamp = t;
+  const s = analyze(frame);
+  if (t % 1000 === 0) console.log("t =", t, "calibrating:", s.calibrating, "progress:", s.calibrationProgress);
+}
+console.log("result ok:", (await done).ok);
+console.log("upright:", analyze(makeFakeFrame()).score);
+console.log("head down:", analyze(makeFakeFrame({ neckDrop: 0.2 })).score);
