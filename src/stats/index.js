@@ -56,6 +56,7 @@ export function recordPosture(state, now = Date.now()) {
 /**
  * Counts finished stretches. The stretches module sends "end" both when a stretch finishes
  * and when it's stopped early, so a stretch only counts if it lasted MIN_STRETCH_SEC.
+ * A rep stretch (ui.onRepStretchEvent) sends completed: true when every rep was done: that always counts.
  * @param {import('../shared/contracts.js').StretchEvent} event
  * @param {number} [now] for testing; normally the current time
  */
@@ -65,7 +66,7 @@ export function recordStretchEvent(event, now = Date.now()) {
 
   const lastedSec = (now - stretchStartedAt) / 1000;
   stretchStartedAt = null;
-  if (lastedSec < MIN_STRETCH_SEC) return;
+  if (lastedSec < MIN_STRETCH_SEC && !event.completed) return; // every rep done counts, however quick
 
   todayLog(now).stretches += 1;
   save(now);

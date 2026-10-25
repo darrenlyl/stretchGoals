@@ -112,6 +112,8 @@ if (dockSpot) miniMaizy.mount(dockSpot);
 stats.mountStatsPage(document.querySelector('#stats-page'));
 // Finished stretches count towards today's total and the streak
 stretches.onStretchEvent((event) => stats.recordStretchEvent(event));
+// Rep stretches (counted by the camera) don't use the timer, so the UI sends their events
+ui.onRepStretchEvent((event) => stats.recordStretchEvent(event));
 
 // Every PostureState goes to everyone who reacts to posture.
 function handleState(state) {

@@ -17,6 +17,9 @@
  *   ui.maizyState(state)     The PostureState to give Maizy: the same one, except during a stretch, when
  *                            she stands normally at rest and tall while you do the move (never slumped).
  *   ui.runningStretch()      { id, stepIndex } for the stretch on screen, or null.
+ *   ui.onRepStretchEvent(cb) cb(event) for rep stretches, which don't use the stretch timer: a
+ *                            StretchEvent "start", then "end" (completed: true if every rep was done).
+ *                            Returns an unsubscribe function.
  *   ui.showScreen(name)      "welcome" | "calibrate" | "dashboard" | "stretch" | "stats". Tray "recalibrate" can
  *                            use showScreen("calibrate"). Going to "calibrate" stops a running stretch.
  *   ui.onCameraChange(cb)    cb(on) runs when the camera turns on or off (the top-bar Camera button
@@ -79,6 +82,7 @@ const pauseListeners = new Set();
 let cameraLive = false; // true while camera frames are playing in the <video>
 let cameraStarting = false;
 const cameraListeners = new Set();
+const repStretchListeners = new Set(); // ui.onRepStretchEvent
 let settings = { voiceOn: true, sensitivity: DEFAULT_SENSITIVITY, theme: "system" };
 const darkQuery = window.matchMedia?.("(prefers-color-scheme: dark)");
 
@@ -1127,6 +1131,7 @@ function startStretch(stretch) {
     // (finishRepStretch) or when you press Stop. Joseph's timer isn't used, so the UI says
     // the voice lines it would have said.
     stretchRun.mode = "reps";
+    emitRepStretch("start", stretchRun);
     showScreen("stretch");
     sayLine("stretch.intro");
     return;
@@ -1145,6 +1150,7 @@ function finishRepStretch() {
   const run = stretchRun;
   if (!run || run.finishing) return;
   run.finishing = true;
+  emitRepStretch("end", run, true);
   sayLine("stretch.done");
   setTimeout(() => {
     if (stretchRun !== run) return; // already stopped, or another stretch started
@@ -1152,6 +1158,12 @@ function finishRepStretch() {
     if (screen === "stretch") showScreen("dashboard");
     else render();
   }, 2500);
+}
+
+/** Tell ui.onRepStretchEvent listeners (the stats) a rep stretch started or ended. */
+function emitRepStretch(type, run, completed = false) {
+  const event = { type, stretchId: run.id, stepIndex: 0, secondsLeft: 0, completed };
+  repStretchListeners.forEach((cb) => safeCall(cb, event));
 }
 
 /** Say a line from Joseph's lines.js (muting is handled by the voice module). */
@@ -1237,10 +1249,15 @@ function onDockStretchClick() {
 
 function stopRunningStretch() {
   if (!stretchRun) return;
-  const { mode, finishing } = stretchRun;
+  const run = stretchRun;
+  const { mode, finishing } = run;
   endRun();
   if (mode === "reps") {
-    if (!finishing) sayLine("stretch.stopped"); // no timer running, so no "end" event
+    // No timer running, so no "end" event from it: send our own (finishRepStretch already did)
+    if (!finishing) {
+      emitRepStretch("end", run);
+      sayLine("stretch.stopped");
+    }
     return;
   }
   safeCall(stretches?.stopStretch); // sends "end"
@@ -1707,5 +1724,9 @@ export const ui = {
   onCameraChange(cb) {
     cameraListeners.add(cb);
     return () => cameraListeners.delete(cb);
+  },
+  onRepStretchEvent(cb) {
+    repStretchListeners.add(cb);
+    return () => repStretchListeners.delete(cb);
   },
 };
