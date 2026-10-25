@@ -1,0 +1,15 @@
+{
+  "name": "stretchgoals-person-receive-stretch",
+  "display_name": "stretchGoals: Person may RECEIVE a Stretch",
+  "description": "A person may receive a stretch unless one of their conditions BLOCKS it or needs ASK_FIRST. Once a clinician clears them, that condition is stored as CLEARED_CONDITION instead of HAS_CONDITION, so ASK_FIRST no longer applies. Rules and sources: indykite/rules.js.",
+  "note": "IndyKite's Cypher does not accept EXISTS { } subqueries (validator: 'invalid cypher syntax'), so this uses pattern predicates. Created in the Hub on 24 Oct 2026 and switched to Active.",
+  "policy": {
+    "meta": { "policy_version": "3.0-kbac" },
+    "subject": { "type": "Person" },
+    "actions": ["RECEIVE"],
+    "resource": { "type": "Stretch" },
+    "condition": {
+      "cypher": "MATCH (subject:Person), (resource:Stretch) WHERE NOT (subject)-[:HAS_CONDITION]->(:Condition)-[:BLOCKS]->(resource) AND NOT (subject)-[:HAS_CONDITION]->(:Condition)-[:ASK_FIRST]->(resource)"
+    }
+  }
+}
