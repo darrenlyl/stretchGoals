@@ -13,3 +13,15 @@ console.log("ears hidden:", computeMetrics(noEars));
 const noShoulder = makeFakeFrame();
 noShoulder.landmarks[11].visibility = 0.2;
 console.log("shoulder hidden:", computeMetrics(noShoulder));
+
+import { median } from "./calibration.js";
+console.log(median([0.87, 0.88, 0.86, 0.87, 0.20]));  
+console.log(median([4, 1, 3, 2]));                
+
+import { computeBaseline } from "./calibration.js";
+const samples = [
+  computeMetrics(makeFakeFrame()),
+  computeMetrics(makeFakeFrame()),
+  computeMetrics(makeFakeFrame({ neckDrop: 0.6 })),   // glitchy frame
+];
+console.log("baseline:", computeBaseline(samples));
