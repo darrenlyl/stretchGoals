@@ -46,7 +46,7 @@ export const GOODBYE_PATTERN =
   /\b(bye|goodbye|good bye|bye-bye|see (you|ya)|talk (to you )?later|that'?s all|i'?m done|that'?ll be all|good ?night)\b/i;
 
 // What she says first when they called her ("Hey Maizy" or Talk). Spoken straight away.
-const GREETINGS = ["Hey! What's up?", "Hi! What can I do for you?", "Hey there, I'm listening.", "Hi! How can I help?"];
+const GREETINGS = ["Hey hey! Maizy here. What can I do for you?", "Hi! So good to hear from you. What's up?", "Hey! I'm all ears. How can I help?", "Hi there! What can I help you with today?"];
 
 // The daily cap survives restarts when localStorage works, and lives in memory when it doesn't.
 const WAKES_KEY = "maizy.autoWakes";
@@ -249,6 +249,16 @@ export function createMaizyAgent({ Conversation, getSignedUrl, controls = null, 
   // Her tools. Names must match TOOLS in maizy-config.mjs exactly.
   // ---------------------------------------------------------------------------
 
+  // Wait for her to finish the sentence she's saying ("Sure! Turning your camera on."), so the
+  // screen changes as she says it, not a beat before. Capped, so it never holds up a tool for long.
+  function afterSpeech(maxMs = 6000) {
+    const started = Date.now();
+    return new Promise((resolve) => {
+      const check = () => (mode !== "speaking" || Date.now() - started > maxMs ? resolve() : setTimeout(check, 100));
+      check();
+    });
+  }
+
   const clientTools = {
     get_posture_snapshot: () => {
       onLog("tool", "get_posture_snapshot");
@@ -275,10 +285,11 @@ export function createMaizyAgent({ Conversation, getSignedUrl, controls = null, 
       );
     },
 
-    start_stretch: ({ stretch_id }) => {
+    start_stretch: async ({ stretch_id }) => {
       onLog("tool", `start_stretch ${stretch_id}`);
       const stretch = allowedStretches.STRETCHES.find((s) => s.id === stretch_id);
       if (!stretch) return JSON.stringify({ started: false, reason: "Not available: unknown, or it doesn't suit their health check. Use get_stretches." });
+      await afterSpeech();
       allowedStretches.startStretch(stretch_id);
       return JSON.stringify({ started: true, name: stretch.name, steps: stretch.steps.length });
     },
@@ -305,6 +316,7 @@ export function createMaizyAgent({ Conversation, getSignedUrl, controls = null, 
 
     press_button: async ({ button_id }) => {
       if (!controls) return JSON.stringify({ pressed: false, reason: "No app screen here." });
+      await afterSpeech();
       const result = await controls.press(button_id);
       onLog("tool", `press_button ${button_id} (${result.pressed || "nothing"})`);
       lastActivityAt = Date.now(); // waiting on a button isn't the person going quiet
