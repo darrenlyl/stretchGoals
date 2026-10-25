@@ -14,9 +14,9 @@
  *                            paused, start again when it's false.
  *   ui.setPaused(bool)       For the tray's "pause"/"resume". Updates the UI and runs the callbacks.
  *   ui.isPaused()            true while paused.
- *   ui.runningStretch()      { id, stepIndex, waiting } for the stretch on screen, or null. waiting = true
- *                            while the UI holds back stretches.startStretch() until the camera sees the
- *                            first rep (the timer and the voice start then).
+ *   ui.maizyState(state)     The PostureState to give Maizy: the same one, except during a stretch, when
+ *                            she stands normally at rest and tall while you do the move (never slumped).
+ *   ui.runningStretch()      { id, stepIndex } for the stretch on screen, or null.
  *   ui.showScreen(name)      "welcome" | "calibrate" | "dashboard" | "stretch". Tray "recalibrate" can
  *                            use showScreen("calibrate"). Going to "calibrate" stops a running stretch.
  *   ui.onCameraChange(cb)    cb(on) runs when the camera turns on or off (the top-bar Camera button
@@ -93,6 +93,7 @@ let stretchRun = null;
 // The last ~2 s of camera frames, so a new stretch knows how you sat before it started
 const recentFrames = [];
 let lastFrameAt = -Infinity; // performance.now() of the newest camera frame
+let lastRunEndedAt = -Infinity; // performance.now() when the last stretch ended or was replaced
 const FRESH_MS = 1500; // no frame for this long = we're not getting camera frames
 // The stretch the dashboard is suggesting
 let suggested = null;
@@ -459,10 +460,7 @@ const TEMPLATE = `
           </div>
           <div class="sg-guide-action">
             <p class="sg-safety">Move gently and stop if anything hurts. This isn't medical advice.</p>
-            <div class="sg-actions">
-              <button type="button" class="sg-btn sg-btn-secondary" data-ref="stopBtn">Stop stretch</button>
-              <button type="button" class="sg-btn sg-btn-text" data-ref="startTimerBtn" hidden>Start the timer now</button>
-            </div>
+            <button type="button" class="sg-btn sg-btn-secondary" data-ref="stopBtn">Stop stretch</button>
           </div>
         </section>
       </div>
@@ -1045,6 +1043,9 @@ function onStartStretchClick() {
 function startStretch(stretch) {
   if (!stretch?.id) return;
   picked = null;
+  // One stretch at a time: stop the one that's running (its timer would otherwise keep going
+  // and take the screen back with its next tick)
+  stopRunningStretch();
   const firstSeconds = Number(stretch.steps?.[0]?.seconds) || 0;
   stretchRun = newRun(stretch, 0, firstSeconds);
   const canWatch = Boolean(stretchRun.tracker && cameraLive && !paused && performance.now() - lastFrameAt < FRESH_MS);
@@ -1058,19 +1059,9 @@ function startStretch(stretch) {
     sayLine("stretch.intro");
     return;
   }
-  // Timed stretch: the timer waits until you're in position (beginTimer). Without the camera
-  // (or for a rep stretch when the camera is off) it starts now, like before.
-  stretchRun.waiting = canWatch;
+  // Timed stretch (or a rep stretch with the camera off): the timer starts now
   showScreen("stretch");
-  if (!stretchRun.waiting) safeCall(stretches?.startStretch, stretch.id);
-}
-
-/** Start Joseph's timer (and the voice) for a timed stretch that was waiting for you. */
-function beginTimer() {
-  if (!stretchRun?.waiting) return;
-  stretchRun.waiting = false;
-  safeCall(stretches?.startStretch, stretchRun.id);
-  render();
+  safeCall(stretches?.startStretch, stretch.id);
 }
 
 /** Last rep done: say so, show the tick for a moment, then back to the dashboard. */
@@ -1081,7 +1072,7 @@ function finishRepStretch() {
   sayLine("stretch.done");
   setTimeout(() => {
     if (stretchRun !== run) return; // already stopped, or another stretch started
-    stretchRun = null;
+    endRun();
     if (screen === "stretch") showScreen("dashboard");
     else render();
   }, 2500);
@@ -1092,10 +1083,20 @@ function sayLine(lineId) {
   Promise.resolve(safeCall(services.voice?.speakLine, lineId)).catch((err) => console.warn("[ui] voice line failed:", err));
 }
 
-/** A running stretch, with a fresh tracker that learns "neutral" from the frames just before it. */
+/** Forget the running stretch, and remember when it ended (see newRun). */
+function endRun() {
+  if (stretchRun) lastRunEndedAt = performance.now();
+  stretchRun = null;
+}
+
+/**
+ * A running stretch, with a fresh tracker that learns "neutral" from the frames just before it.
+ * Only frames from after the last stretch ended: if you start one right after another, you may
+ * still be in the last one's pose. Too few frames left = it learns neutral in its first second.
+ */
 function newRun(stretch, stepIndex, secondsLeft) {
   const now = performance.now();
-  const before = recentFrames.filter((frame) => now - frame.timestamp < 2000);
+  const before = recentFrames.filter((frame) => now - frame.timestamp < 2000 && frame.timestamp > lastRunEndedAt);
   let tracker = null;
   try {
     tracker = createStretchTracker(stretch, { before });
@@ -1126,13 +1127,25 @@ function onPoseFrame(frame) {
       stretchRun.mode = null;
       safeCall(stretches?.startStretch, stretchRun.id);
     }
-    beginTimer();
   }
-  // Timed stretch: first time you're in position, the timer starts
-  if (stretchRun?.waiting && stretchRun.progress?.inPosition) beginTimer();
   // Rep stretch: last rep done
   if (stretchRun?.mode === "reps" && stretchRun.progress?.done) finishRepStretch();
   if (screen === "stretch") renderStretch();
+}
+
+/**
+ * The PostureState Maizy should see (app.js passes hers through here). No stretch: the real one.
+ * During a stretch your tilts and tucks would read as bad posture, so instead she stands normally
+ * at rest and rises to her best (tall, sparkling) as you go into the move. Never red or slumped.
+ */
+const MAIZY_REST = 82; // the score she shows at rest during a stretch: upright and calm, no sparkles (those start at 95)
+function maizyState(state) {
+  if (!stretchRun || !state) return state;
+  const p = trackingLive() ? stretchRun.progress : null;
+  const into = p && p.status !== "warmup" && p.status !== "unseen" ? clamp01(p.level) : 0;
+  const done = Boolean(stretchRun.finishing || p?.done);
+  const score = done ? 100 : Math.round(MAIZY_REST + (100 - MAIZY_REST) * into);
+  return { ...state, present: true, score, issues: [] };
 }
 
 /** Are we counting right now? Needs a tracker, fresh frames, the camera on and not paused. */
@@ -1149,7 +1162,7 @@ function onDockStretchClick() {
 function stopRunningStretch() {
   if (!stretchRun) return;
   const { mode, finishing } = stretchRun;
-  stretchRun = null;
+  endRun();
   if (mode === "reps") {
     if (!finishing) sayLine("stretch.stopped"); // no timer running, so no "end" event
     return;
@@ -1167,13 +1180,16 @@ function onStopStretchClick() {
 function onStretchEvent(event) {
   if (!event || !root) return;
   if (event.type === "end") {
-    stretchRun = null;
+    // An older stretch's timer ending (e.g. the one we just stopped to start this one): not ours
+    if (stretchRun && stretchRun.id !== event.stretchId) return;
+    endRun();
     if (screen === "stretch") showScreen("dashboard");
     else render();
     return;
   }
   if (!stretchRun || stretchRun.id !== event.stretchId) {
     // Started somewhere else (e.g. by voice)
+    endRun();
     stretchRun = newRun(findStretch(event.stretchId), -1, 0);
   }
   const stepIndex = Number(event.stepIndex) || 0;
@@ -1225,12 +1241,11 @@ function renderStretch() {
     renderPicker();
     return;
   }
-  const { stretch, stepIndex, secondsLeft, stepTotal, waiting, mode } = stretchRun;
+  const { stretch, stepIndex, secondsLeft, stepTotal, mode } = stretchRun;
   const steps = Array.isArray(stretch.steps) ? stretch.steps : [];
   const live = trackingLive();
   const p = stretchRun.progress;
   setText(refs.stretchName, stretchName(stretch));
-  show(refs.startTimerBtn, Boolean(waiting));
 
   if (mode === "reps") {
     // Rep stretch: no timer. The ring counts reps, and the stretch ends on the last one.
@@ -1251,23 +1266,6 @@ function renderStretch() {
     setText(refs.stretchSub, why);
     show(refs.stretchSub, why !== "");
     refs.stretchSide.setAttribute("aria-label", "Reps done so far");
-    renderTrack(live, p);
-    return;
-  }
-
-  if (waiting) {
-    // Timed stretch, timer not started: it starts when you get into position
-    setText(refs.stretchStep, stretchHow(stretch) || stepText(steps[0]));
-    setText(refs.stretchNext, "The timer starts when you get into position.");
-    setText(refs.stretchLabel, "Ready");
-    setRingValue(refs.stretchValue, "");
-    setData(refs.stretchValue, "icon", "");
-    setData(refs.stretchRing, "tone", "accent");
-    setRing(refs.stretchRingBar, 0);
-    setText(refs.stretchStepOf, live ? "Get into position" : "Getting ready…");
-    setText(refs.stretchSub, "Timer starts when you do");
-    show(refs.stretchSub, live);
-    refs.stretchSide.setAttribute("aria-label", "Waiting for you to get into position");
     renderTrack(live, p);
     return;
   }
@@ -1440,7 +1438,6 @@ function mount(el, givenServices = {}) {
     refs.pickStart.focus({ preventScroll: true }); // so Enter starts it
   });
   refs.stopBtn.addEventListener("click", onStopStretchClick);
-  refs.startTimerBtn.addEventListener("click", beginTimer);
   refs.issuesAction.addEventListener("click", () => {
     if (paused) setPaused(false);
     else showScreen("calibrate");
@@ -1540,8 +1537,9 @@ export const ui = {
   setPaused,
   isPaused: () => paused,
   showScreen,
-  /** The running stretch: { id, stepIndex, waiting } (waiting = timer not started yet), or null. */
-  runningStretch: () => (stretchRun ? { id: stretchRun.id, stepIndex: stretchRun.stepIndex, waiting: Boolean(stretchRun.waiting) } : null),
+  maizyState,
+  /** The running stretch: { id, stepIndex }, or null. */
+  runningStretch: () => (stretchRun ? { id: stretchRun.id, stepIndex: stretchRun.stepIndex } : null),
   onCameraChange(cb) {
     cameraListeners.add(cb);
     return () => cameraListeners.delete(cb);

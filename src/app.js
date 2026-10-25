@@ -105,8 +105,10 @@ if (dockSpot) miniMaizy.mount(dockSpot);
 // Every PostureState goes to everyone who reacts to posture.
 function handleState(state) {
   ui.update(state);
-  maizy.update(state);
-  miniMaizy.update(state);
+  // During a stretch the UI picks Maizy's pose: tall while you do the move, normal at rest
+  const maizyState = ui.maizyState?.(state) ?? state;
+  maizy.update(maizyState);
+  miniMaizy.update(maizyState);
   voice.voiceCoach.update(state);
   postureNotifier.update(state);
   agent.update(state);
