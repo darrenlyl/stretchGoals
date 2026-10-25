@@ -85,6 +85,8 @@ let externalCalibration = false; // true while a calibration someone else starte
 let stretchRun = null;
 // The stretch the dashboard is suggesting
 let suggested = null;
+// The stretch clicked in the picker (waits for its Start button), or null
+let picked = null;
 
 // One row per issue, made once and then shown/hidden (no rebuilding each frame)
 const issueRows = {};
@@ -258,7 +260,7 @@ const TEMPLATE = `
 <div class="sg-app" data-screen="welcome" data-stretching="no">
   <!-- Left rail: navigation and the Maizy dock (hidden on the welcome screen) -->
   <nav class="sg-rail" data-ref="rail" aria-label="Main">
-    <div class="sg-brand">${ICON.mark}<span class="sg-brand-name">Stretch<span>Goals</span></span></div>
+    <div class="sg-brand">${ICON.mark}<span class="sg-brand-name">stretch<span>Goals</span></span></div>
     <div class="sg-rail-nav">
       <button type="button" class="sg-nav" data-nav="dashboard" title="Dashboard">${ICON.pulse}<span class="sg-nav-label">Dashboard</span></button>
       <button type="button" class="sg-nav" data-nav="calibrate" title="Calibrate">${ICON.target}<span class="sg-nav-label">Calibrate</span></button>
@@ -280,7 +282,7 @@ const TEMPLATE = `
 
   <div class="sg-body">
   <header class="sg-header">
-    <div class="sg-brand sg-header-brand">${ICON.mark}<span class="sg-brand-name">Stretch<span>Goals</span></span></div>
+    <div class="sg-brand sg-header-brand">${ICON.mark}<span class="sg-brand-name">stretch<span>Goals</span></span></div>
     <div class="sg-heading">
       <h1 class="sg-screen-title" data-ref="screenTitle"></h1>
       <p class="sg-screen-lede" data-ref="screenLede"></p>
@@ -415,7 +417,7 @@ const TEMPLATE = `
         <section class="sg-card sg-panel sg-picker sg-stretch-pick" aria-labelledby="sg-picker-title">
           <div class="sg-card-head">
             <h2 id="sg-picker-title" class="sg-h3">All stretches</h2>
-            <span class="sg-count">Click one to start it</span>
+            <span class="sg-count">Choose one, then press Start stretch</span>
           </div>
           <ul class="sg-pick-list" data-ref="pickList"></ul>
         </section>
@@ -939,23 +941,43 @@ function renderTip(worstIssue) {
 
   const seconds = stretchSeconds(stretch);
   const forText = issueId ? `For: ${ISSUES[issueId].layman.toLowerCase()}` : "Good any time you've been sitting a while.";
-  for (const [label, name, forEl, how, time, labelText] of [
-    [refs.tipLabel, refs.tipName, refs.tipFor, refs.tipHow, refs.tipTime, issueId ? "Suggested stretch" : "Quick reset"],
-    [refs.pickLabel, refs.pickName, refs.pickFor, refs.pickHow, refs.pickTime, issueId ? "Suggested for you" : "Quick reset"],
-  ]) {
-    setText(label, labelText);
-    setText(name, stretchName(stretch));
-    setText(forEl, forText);
-    setData(forEl, "chip", issueId ? "yes" : "no");
-    setText(how, stretchHow(stretch));
-    setText(time, seconds ? `About ${seconds} s` : "");
-  }
-  // Mark it in the picker's list too
-  for (const button of refs.pickList.querySelectorAll(".sg-pick")) {
-    setData(button, "suggested", button.dataset.stretchId === stretch.id ? "yes" : "no");
-  }
+  setText(refs.tipLabel, issueId ? "Suggested stretch" : "Quick reset");
+  setText(refs.tipName, stretchName(stretch));
+  setText(refs.tipFor, forText);
+  setData(refs.tipFor, "chip", issueId ? "yes" : "no");
+  setText(refs.tipHow, stretchHow(stretch));
+  setText(refs.tipTime, seconds ? `About ${seconds} s` : "");
   fitTipText(refs.tipHow);
+  renderPickSide();
+}
+
+/** The picker's top card: the stretch you clicked, or the suggested one until you pick. */
+function renderPickSide() {
+  const stretch = picked ?? suggested?.stretch;
+  if (!stretch) return;
+  const issueId = picked || suggested.key === "none" ? null : suggested.key;
+  const card = refs.pickName.closest(".sg-card");
+  const key = `${picked ? "picked" : issueId ?? "none"}:${stretch.id}`;
+  if (card.dataset.key === key) return; // nothing changed
+  card.dataset.key = key;
+
+  // A picked stretch says what it helps; a suggestion says which of your issues it's for
+  const helps = (stretch.helps ?? []).map((id) => ISSUES[id]?.layman.toLowerCase()).filter(Boolean);
+  const forText = issueId ? `For: ${ISSUES[issueId].layman.toLowerCase()}` : picked && helps.length ? `For: ${helps.join(", ")}` : "Good any time you've been sitting a while.";
+  const seconds = stretchSeconds(stretch);
+  setText(refs.pickLabel, picked ? "Your pick" : issueId ? "Suggested for you" : "Quick reset");
+  setText(refs.pickName, stretchName(stretch));
+  setText(refs.pickFor, forText);
+  setData(refs.pickFor, "chip", forText.startsWith("For:") ? "yes" : "no");
+  setText(refs.pickHow, stretchHow(stretch));
+  setText(refs.pickTime, seconds ? `About ${seconds} s` : "");
   fitTipText(refs.pickHow);
+  // Tick the one shown in the card
+  for (const button of refs.pickList.querySelectorAll(".sg-pick")) {
+    const selected = button.dataset.stretchId === stretch.id;
+    setData(button, "selected", selected ? "yes" : "no");
+    button.setAttribute("aria-pressed", String(selected));
+  }
 }
 
 /** A suggested-stretch description shows as many whole lines as fit its card (up to 4), or none. */
@@ -981,6 +1003,7 @@ function worstIssue(state) {
 
 function renderPicker() {
   renderTip(worstIssue(lastState));
+  renderPickSide();
 }
 
 // ─── 4. Guided stretch ──────────────────────────────────────────────────────
@@ -993,6 +1016,7 @@ function onStartStretchClick() {
 
 function startStretch(stretch) {
   if (!stretch?.id) return;
+  picked = null;
   const firstSeconds = Number(stretch.steps?.[0]?.seconds) || 0;
   stretchRun = { id: stretch.id, stretch, stepIndex: 0, secondsLeft: firstSeconds, stepTotal: firstSeconds };
   showScreen("stretch");
@@ -1063,12 +1087,12 @@ function buildPickList() {
           <span class="sg-pick-name"></span>
           <span class="sg-pick-meta"></span>
         </span>
-        <span class="sg-pick-go">${ICON.play}</span>
+        <span class="sg-pick-mark">${ICON.check}</span>
       </button>`;
     li.querySelector(".sg-pick-name").textContent = stretchName(stretch);
     // Time first, so it's never the part cut short: "35 s · Neck too far forward"
     li.querySelector(".sg-pick-meta").textContent = [seconds ? `${seconds} s` : "", helpsText || "Any time"].filter(Boolean).join(" · ");
-    li.querySelector(".sg-pick").title = helpsText ? `Start ${stretchName(stretch)}. Helps: ${helpsText.toLowerCase()}` : `Start ${stretchName(stretch)}`;
+    li.querySelector(".sg-pick").title = helpsText ? `Choose ${stretchName(stretch)}. Helps: ${helpsText.toLowerCase()}` : `Choose ${stretchName(stretch)}`;
     refs.pickList.appendChild(li);
   }
 }
@@ -1202,10 +1226,17 @@ function mount(el, givenServices = {}) {
   refs.calibBtn.addEventListener("click", onCalibrateClick);
   refs.skipBtn.addEventListener("click", () => showScreen("dashboard"));
   refs.tipStart.addEventListener("click", onStartStretchClick);
-  refs.pickStart.addEventListener("click", onStartStretchClick);
+  // Picker: clicking a stretch only chooses it; its Start button begins the countdown
+  refs.pickStart.addEventListener("click", () => {
+    if (!suggested) renderTip(null);
+    startStretch(picked ?? suggested?.stretch);
+  });
   refs.pickList.addEventListener("click", (e) => {
     const pick = e.target.closest(".sg-pick");
-    if (pick) startStretch(findStretch(pick.dataset.stretchId));
+    if (!pick) return;
+    picked = findStretch(pick.dataset.stretchId);
+    renderPickSide();
+    refs.pickStart.focus({ preventScroll: true }); // so Enter starts it
   });
   refs.stopBtn.addEventListener("click", onStopStretchClick);
   refs.issuesAction.addEventListener("click", () => {
