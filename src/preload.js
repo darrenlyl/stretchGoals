@@ -7,10 +7,13 @@ contextBridge.exposeInMainWorld('api', {
 
   notify: (title, body) => ipcRenderer.send('notify', title, body),
 
+  // Returns a Promise of a signed URL for one call with Maizy (the API key stays in main).
+  maizySignedUrl: () => ipcRenderer.invoke('maizy-signed-url'),
+
   // score is a number, or null to show "–".
   setTrayScore: (score) => ipcRenderer.send('set-tray-score', score),
 
-  // cb gets 'pause' | 'resume' | 'recalibrate' | 'show'. Returns an unsubscribe function.
+  // cb gets 'pause' | 'resume' | 'recalibrate' | 'show' | 'talk'. Returns an unsubscribe function.
   onTrayCommand: (cb) => {
     const listener = (_event, command) => cb(command);
     ipcRenderer.on('tray-command', listener);

@@ -9,6 +9,11 @@ import { FuseV1Options, FuseVersion } from '@electron/fuses';
 const config = {
   packagerConfig: {
     asar: true,
+    // Mac shows these when asking for permission. Without them a packaged app gets no camera or mic.
+    extendInfo: {
+      NSCameraUsageDescription: 'stretchGoals watches your posture through your camera. Video stays on this computer.',
+      NSMicrophoneUsageDescription: 'stretchGoals listens for "Hey Maizy" on this computer, and for your voice when you talk to Maizy.',
+    },
   },
   rebuildConfig: {},
   makers: [

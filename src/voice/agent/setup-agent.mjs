@@ -10,6 +10,7 @@ import {
   VOICE,
   TURN_TIMEOUT_SECONDS,
   MAX_DURATION_SECONDS,
+  SILENCE_END_CALL_SECONDS,
   TOOLS,
 } from "./maizy-config.mjs";
 
@@ -59,7 +60,7 @@ const agent = {
       },
     },
     tts: VOICE,
-    turn: { turn_timeout: TURN_TIMEOUT_SECONDS },
+    turn: { turn_timeout: TURN_TIMEOUT_SECONDS, silence_end_call_timeout: SILENCE_END_CALL_SECONDS },
     conversation: { max_duration_seconds: MAX_DURATION_SECONDS },
   },
 };

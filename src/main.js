@@ -73,8 +73,33 @@ app.whenReady().then(async () => {
   createWindow();
   createTray();
 
+  // The mic is for "Hey Maizy" and for talking to her. Asked after the window opens, so
+  // an unanswered prompt doesn't hold the app up.
+  if (process.platform === 'darwin') {
+    systemPreferences
+      .askForMediaAccess('microphone')
+      .then((mic) => console.log('Microphone access:', mic ? 'allowed' : 'denied'));
+  }
+
   // Mac: clicking the dock icon brings the hidden window back.
   app.on('activate', showWindow);
+});
+
+// maizySignedUrl(): a short-lived link (about 15 minutes, this agent only) for one call with Maizy.
+// The API key stays here; the window only ever sees the link.
+ipcMain.handle('maizy-signed-url', async () => {
+  const { ELEVENLABS_API_KEY, ELEVENLABS_AGENT_ID } = process.env;
+  if (!ELEVENLABS_API_KEY || !ELEVENLABS_AGENT_ID) {
+    throw new Error('Missing ELEVENLABS_API_KEY or ELEVENLABS_AGENT_ID in .env');
+  }
+  const res = await fetch(
+    `https://api.elevenlabs.io/v1/convai/conversation/get-signed-url?agent_id=${ELEVENLABS_AGENT_ID}`,
+    { headers: { 'xi-api-key': ELEVENLABS_API_KEY } },
+  );
+  if (!res.ok) {
+    throw new Error(`ElevenLabs ${res.status}: ${await res.text()}`);
+  }
+  return (await res.json()).signed_url;
 });
 
 // Any real quit (tray Quit, Cmd+Q, shutting down) lets the window close.
@@ -147,7 +172,7 @@ ipcMain.on('set-tray-score', (_event, score) => {
   if (tray) updateTrayScore();
 });
 
-// Sends 'pause' | 'resume' | 'recalibrate' | 'show' to the window.
+// Sends 'pause' | 'resume' | 'recalibrate' | 'show' | 'talk' to the window.
 function sendTrayCommand(command) {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('tray-command', command);
@@ -187,6 +212,7 @@ function updateTrayScore() {
 function updateTrayMenu() {
   const menu = Menu.buildFromTemplate([
     { label: 'Show window', click: showWindow },
+    { label: 'Talk to Maizy', click: () => sendTrayCommand('talk') },
     { label: paused ? 'Resume' : 'Pause', click: togglePause },
     {
       label: 'Recalibrate',

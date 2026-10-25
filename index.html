@@ -5,14 +5,10 @@
     <title>stretchGoals</title>
   </head>
   <body>
-    <!-- Darren's UI replaces everything in #app when it mounts. -->
-    <div id="app">
-      <h1>stretchGoals</h1>
-      <video id="camera-video" width="480" autoplay playsinline muted></video>
-      <p id="camera-error"></p>
-      <div id="maizy"></div>
-      <p><small>Not medical advice.</small></p>
-    </div>
+    <!-- Darren's UI fills #app when it mounts, including the camera and #maizy slots. -->
+    <div id="app"></div>
+    <!-- Maizy call chip: "Say Hey Maizy" / "Talking to Maizy", with Talk and End (src/app.js). -->
+    <div id="maizy-call" aria-live="polite"></div>
     <!-- Dev only: fake posture panel (outside #app so the UI doesn't replace it). -->
     <div id="debug-panel"></div>
     <script type="module" src="/src/app.js"></script>

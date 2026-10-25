@@ -32,8 +32,11 @@
       <h2>1. Talk</h2>
       <button id="start" class="primary">Start talking to Maizy</button>
       <button id="end" disabled>End</button>
-      <p class="muted">Status: <b id="status">disconnected</b> · Maizy is <b id="mode">–</b></p>
-      <label class="muted"><input type="checkbox" id="fast" checked /> Fast cooldowns for testing (20 s instead of 3 min)</label>
+      <button id="listen">Listen for “Hey Maizy”</button>
+      <p class="muted">Call: <b id="status">idle</b> · “Hey Maizy”: <b id="wakeState">off</b></p>
+      <p class="muted">Calls hang up after 30 s of quiet, and at 5 minutes. Every minute connected is billed.</p>
+      <label class="muted"><input type="checkbox" id="autowake" /> Let the app wake her (stuck issue, long sit)</label><br />
+      <label class="muted"><input type="checkbox" id="fast" checked /> Fast timings for testing (stuck after 30 s instead of 4 min)</label>
     </section>
 
     <section>
@@ -43,7 +46,6 @@
       <p><label class="muted">How bad: <input type="range" id="severity" min="0.3" max="1" step="0.1" value="0.6" /></label></p>
       <p><span class="big" id="score">100</span> <span class="muted">score</span></p>
       <p class="muted" id="issueInfo">Sitting tall</p>
-      <p class="muted" id="stretchInfo"></p>
     </section>
   </div>
 
