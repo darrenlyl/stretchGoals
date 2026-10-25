@@ -320,12 +320,10 @@ const TEMPLATE = `
 
       <!-- 1. Welcome / camera permission -->
       <section class="sg-card sg-welcome" aria-labelledby="sg-welcome-title">
-        <h1 id="sg-welcome-title" class="sg-title">Sit like Maizy.</h1>
-        <p class="sg-lede">She copies how you sit. Slouch and she slouches. Sit tall and she cheers.</p>
+        <h1 id="sg-welcome-title" class="sg-title sg-brand-name">stretch<span>Goals</span></h1>
         <div class="sg-actions">
           <button type="button" class="sg-btn sg-btn-primary" data-ref="startBtn">Start camera</button>
         </div>
-        <p class="sg-note sg-welcome-note" data-ref="startNote">${ICON.lock}<span>Video never leaves this laptop. Your computer may ask for permission to use the camera.</span></p>
         <div class="sg-alert" role="alert" data-ref="cameraError" hidden>
           <strong>We couldn't turn on your camera.</strong>
           <span data-ref="cameraErrorText"></span>

@@ -585,9 +585,6 @@ body.sg-host {
   display: none;
   padding: 0;
 }
-.sg-app[data-screen="welcome"] .sg-header-brand {
-  display: flex;
-}
 .sg-app[data-screen="welcome"] .sg-heading {
   display: none;
 }
@@ -799,35 +796,20 @@ body.sg-host {
   box-shadow: none;
   container-type: inline-size;
 }
+/* The app's name is the welcome's heading (the small logo in the top bar is hidden here) */
 .sg-welcome .sg-title {
-  font-size: clamp(34px, 9cqi, 60px);
-  line-height: 1.02;
-  letter-spacing: -0.035em;
-}
-.sg-welcome .sg-lede {
-  font-size: 17px;
-  max-width: 34ch;
+  font-size: clamp(40px, 12cqi, 84px);
+  line-height: 1;
+  letter-spacing: -0.04em;
+  white-space: nowrap;
 }
 .sg-welcome .sg-actions {
-  margin-top: 8px;
+  margin-top: 12px;
 }
 .sg-welcome .sg-btn-primary {
   height: 48px;
   padding: 0 26px;
   font-size: 15px;
-}
-/* The privacy promise and the permission heads-up, as one quiet line */
-.sg-welcome-note {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  max-width: 44ch;
-}
-.sg-welcome-note .sg-icon {
-  width: 15px;
-  height: 15px;
-  margin-top: 2px;
-  color: var(--sg-trust);
 }
 .sg-app[data-screen="welcome"] .sg-main {
   position: relative;
