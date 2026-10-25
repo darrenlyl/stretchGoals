@@ -1,16 +1,22 @@
-import { PoseLandmarker, FilesetResolver } from '@mediapipe/tasks-vision';
+import { PoseLandmarker } from '@mediapipe/tasks-vision';
 import { LANDMARKS, MIN_VISIBILITY } from '../shared/contracts.js';
 
-const WASM_PATH =
-  'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.1.1/wasm'; // path to the ENGINE: webassembly code which is already compiled and then runs in the browser
-const MODEL_PATH =
-  'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task'; // path to the model we're using (pose_landmarker_lite.task)
+// MediaPipe's engine (WebAssembly) and the pose model live in public/mediapipe/,
+// so the app works offline. Vite serves public/ at the site root while developing,
+// and copies it next to index.html in the packaged app.
+// BASE_URL is '/' while developing and './' in the packaged app, so these paths work in both.
+const MEDIAPIPE_DIR = `${import.meta.env.BASE_URL}mediapipe`;
+const WASM_FILES = {
+  wasmLoaderPath: `${MEDIAPIPE_DIR}/wasm/vision_wasm_internal.js`, // starts the engine
+  wasmBinaryPath: `${MEDIAPIPE_DIR}/wasm/vision_wasm_internal.wasm`, // the engine itself
+};
+const MODEL_PATH = `${MEDIAPIPE_DIR}/pose_landmarker_lite.task`; // the lite pose model
 
 const DETECT_EVERY_MS = 100; // ~10 PoseFrames per second
 
 // 0: nose, 2: left eye, 5: right eye, 7: left ear, 8: right ear, 11: left shoulder,
 // 12: right shoulder, 13: left elbow, 14: right elbow, 23: left hip, 24: right hip
-const POINTS_TO_DRAW = [0, 2, 5, 7, 8, 11, 12, 13, 14, 23, 24];
+const POINTS_TO_DRAW = [0, 2, 5, 7, 8, 11, 12, 23, 24];
 const LINES = [
   [7, 2], // left ear -> left eye
   [5, 8], // right ear -> right eye
@@ -66,9 +72,8 @@ export async function startCamera(videoE1, canvasE1){
 
         // only load the model the first time. After stopCamera() it's reused
         if (!landmarker){
-            const vision = await FilesetResolver.forVisionTasks(WASM_PATH);
             // createFromOptions() builds the detector
-            landmarker = await PoseLandmarker.createFromOptions(vision, {
+            landmarker = await PoseLandmarker.createFromOptions(WASM_FILES, {
                 baseOptions: { modelAssetPath: MODEL_PATH },
                 runningMode: 'VIDEO', // feed it video frames in sequence
                 numPoses: 1, // only tracking one person
