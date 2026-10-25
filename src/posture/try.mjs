@@ -50,3 +50,12 @@ for (let t = 0; t <= 3000; t += 100) {
 console.log("result ok:", (await done).ok);
 console.log("upright:", analyze(makeFakeFrame()).score);
 console.log("head down:", analyze(makeFakeFrame({ neckDrop: 0.2 })).score);
+
+import { setSensitivity, resetCalibration } from "./index.js";
+const small = makeFakeFrame({ neckDrop: 0.1 });
+setSensitivity(0);   console.log("relaxed:", analyze(small).issues.length);
+setSensitivity(0.5); console.log("normal:",  analyze(small).issues.length);
+setSensitivity(1);   console.log("strict:",  analyze(small).issues.length);
+
+resetCalibration();
+console.log("after reset, calibrated:", analyze(makeFakeFrame()).calibrated);
