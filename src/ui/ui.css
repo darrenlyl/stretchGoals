@@ -1,7 +1,12 @@
 /* stretchGoals UI styles (owner: Claude via Darren).
    Loaded by ui.mount() itself. Every class starts with "sg-" so it can't clash
-   with other modules' CSS. Colours and sizes are variables at the top: change
-   them there, not in the rules below. */
+   with other modules' CSS. Colours, sizes and curves are variables at the top:
+   change them there, not in the rules below.
+
+   The look: a physio's exercise sheet, filled in live. Paper panels with thin ink
+   rules, a pine letterhead, one typeface (Archivo, with its width axis), and the
+   marks a physio's hand would leave: a highlighter swipe on what needs attention,
+   a red-pen ring round a problem that has lasted, a tick when it's fixed. */
 
 .sg-host {
   box-sizing: border-box;
@@ -11,43 +16,96 @@ body.sg-host {
 }
 
 .sg-app {
-  /* Colours */
-  --sg-bg: #ffffff;
-  --sg-panel: #f4f3ef; /* bone: the one card colour */
-  --sg-panel-2: #e8e6df; /* one step darker: ring tracks, bar tracks */
-  --sg-text: #1f201d;
-  --sg-muted: #5b5a55;
-  --sg-line: #e6e4dd;
-  --sg-control: #d2d0c8;
-  --sg-accent: #1d5fbf; /* the one accent: main buttons, progress rings */
-  --sg-accent-hover: #184f9f;
-  --sg-good: #2e7d32;
-  --sg-ok: #b26a00;
-  --sg-bad: #b42318;
-  --sg-pill-bad-bg: #fbe3df;
-  --sg-pill-bad-ink: #7a1d14;
-  --sg-camera-bg: #2b2c29;
+  /* Colours: light (the sheet in daylight) */
+  --sg-ground: #e7eae3; /* the desk under the sheets: a cool security-paper tint */
+  --sg-sheet: #fbfcf9; /* panels */
+  --sg-sheet-2: #f0f2ec; /* insets, tracks, the camera's frame */
+  --sg-ink: #15201a;
+  --sg-ink-2: #46534b; /* secondary text, 7:1 on the sheet */
+  --sg-ink-3: #66726a; /* labels, 4.8:1 on the sheet */
+  --sg-rule: #d5dad2;
+  --sg-rule-strong: #a3ada4;
+  --sg-band: #173d31; /* the letterhead */
+  --sg-band-ink: #eef3ec;
+  --sg-band-ink-2: #b4c6ba;
+  --sg-accent: #173d31; /* the one accent: main buttons, rings, the needle */
+  --sg-accent-ink: #f4f7f2;
+  --sg-good: #1d7449;
+  --sg-ok: #9a5a00;
+  --sg-bad: #c0362b; /* red pen */
+  --sg-highlight: #e3f04a; /* highlighter */
+  --sg-hl-alpha: 0.85;
+  --sg-camera-bg: #1c241f;
+  --sg-zone-bad: #f3dcd6;
+  --sg-zone-ok: #f3e6cc;
+  --sg-zone-good: #d7eadb;
+  --sg-shadow: 0 18px 50px rgb(18 40 30 / 0.18), 0 2px 6px rgb(18 40 30 / 0.08);
 
-  /* Shape and space */
-  --sg-radius: 20px;
-  --sg-radius-sm: 12px;
-  --sg-gap: 16px;
-  --sg-pad: 20px;
-  --sg-edge: 24px; /* space between the window edge and the cards */
+  /* Shape and space. Panels and controls share one small radius (paper has corners);
+     pills are only for chips. */
+  --sg-radius: 6px;
+  --sg-gap: 12px;
+  --sg-pad: 18px;
+  --sg-edge: 16px;
+  --sg-header-h: 48px;
+
+  /* Motion */
+  --sg-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --sg-ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --sg-ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  /* --sg-spring and --sg-spring-ms are set by index.js (a spring written as linear()) */
+
+  /* Type */
+  --sg-font:
+    'SG Archivo', 'Segoe UI Variable Text', 'Segoe UI', system-ui,
+    -apple-system, sans-serif;
 
   position: relative;
   height: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--sg-bg);
-  color: var(--sg-text);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, Roboto, "Helvetica Neue", Arial, sans-serif;
+  background: var(--sg-ground);
+  color: var(--sg-ink);
+  font-family: var(--sg-font);
   font-size: 14px;
   line-height: 1.45;
+  font-stretch: 100%;
   -webkit-font-smoothing: antialiased;
+  accent-color: var(--sg-accent);
+  color-scheme: light;
   /* Lets the layout react to the app's own size (see the @container rules at the bottom) */
   container: sg-app / size;
+}
+
+@media (prefers-color-scheme: dark) {
+  /* Dark: the same sheet under a desk lamp at night */
+  .sg-app {
+    --sg-ground: #0d1210;
+    --sg-sheet: #151c18;
+    --sg-sheet-2: #1c2520;
+    --sg-ink: #e5ebe4;
+    --sg-ink-2: #aab6ad;
+    --sg-ink-3: #8a978e;
+    --sg-rule: #27322c;
+    --sg-rule-strong: #46544b;
+    --sg-band: #11281f;
+    --sg-band-ink: #e5ebe4;
+    --sg-band-ink-2: #93aa9b;
+    --sg-accent: #8fd0ad;
+    --sg-accent-ink: #0d1a14;
+    --sg-good: #63c993;
+    --sg-ok: #e3a745;
+    --sg-bad: #ff7262;
+    --sg-highlight: #d6e64a;
+    --sg-hl-alpha: 0.26;
+    --sg-camera-bg: #0a0e0c;
+    --sg-zone-bad: #3a2320;
+    --sg-zone-ok: #3a2f1c;
+    --sg-zone-good: #1d3527;
+    --sg-shadow: 0 18px 50px rgb(0 0 0 / 0.5), 0 2px 6px rgb(0 0 0 / 0.3);
+    color-scheme: dark;
+  }
 }
 
 .sg-app *,
@@ -55,53 +113,247 @@ body.sg-host {
 .sg-app *::after {
   box-sizing: border-box;
 }
-.sg-app :where(h1, h2, h3, p, ul, ol, figure) {
+.sg-app :where(h1, h2, h3, p, ul, ol, dl, dd, figure) {
   margin: 0;
+}
+.sg-app :where(ul, ol) {
+  padding: 0;
+  list-style: none;
 }
 .sg-app [hidden] {
   display: none !important;
 }
+.sg-app ::selection {
+  background: color-mix(in srgb, var(--sg-highlight) 70%, transparent);
+  color: var(--sg-ink);
+}
+.sg-app * {
+  scrollbar-width: thin;
+  scrollbar-color: var(--sg-rule-strong) transparent;
+}
 .sg-app :focus-visible {
   outline: 2px solid var(--sg-accent);
   outline-offset: 2px;
+  border-radius: 3px;
+}
+.sg-app kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.6em;
+  padding: 0 4px;
+  border: 1px solid var(--sg-rule-strong);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  font: 600 11px/1.5 var(--sg-font);
+  color: var(--sg-ink-2);
+}
+.sg-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 /* ── Type ─────────────────────────────────────────────────────────────── */
 
 .sg-title {
-  font-size: 30px;
-  font-weight: 650;
-  line-height: 1.12;
+  font-size: clamp(32px, 8.4cqw, 66px);
+  font-stretch: 78%;
+  font-weight: 760;
+  line-height: 1.02;
   letter-spacing: -0.02em;
-  max-width: 18em;
   text-wrap: balance;
 }
-.sg-lede {
-  font-size: 16px;
-  max-width: 44ch;
+.sg-title-2 {
+  color: var(--sg-ink-2);
+  font-weight: 560;
 }
 .sg-h2 {
-  font-size: 20px;
-  font-weight: 600;
-  line-height: 1.25;
+  font-size: 21px;
+  font-stretch: 88%;
+  font-weight: 680;
+  line-height: 1.15;
   letter-spacing: -0.01em;
+  text-wrap: balance;
 }
 .sg-h3 {
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 650;
   line-height: 1.3;
 }
 .sg-label {
-  font-size: 13px;
-  color: var(--sg-muted);
+  font-size: 12px;
+  font-weight: 560;
+  color: var(--sg-ink-3);
+}
+.sg-lede {
+  max-width: 54ch;
+  font-size: 15.5px;
+  color: var(--sg-ink-2);
+  text-wrap: pretty;
 }
 .sg-note {
+  font-size: 12.5px;
+  color: var(--sg-ink-3);
+}
+.sg-verdict {
+  font-size: 17px;
+  font-stretch: 90%;
+  font-weight: 680;
+  line-height: 1.2;
+}
+.sg-subverdict {
   font-size: 13px;
-  color: var(--sg-muted);
+  color: var(--sg-ink-2);
 }
 
-/* ── Icons ────────────────────────────────────────────────────────────── */
+/* ── Header: the letterhead band ──────────────────────────────────────── */
 
+.sg-header {
+  flex: none;
+  height: var(--sg-header-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 var(--sg-edge);
+  background: var(--sg-band);
+  color: var(--sg-band-ink);
+}
+.sg-brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+.sg-mark {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+}
+.sg-mark rect:nth-child(2),
+.sg-mark rect:nth-child(3) {
+  fill: var(--sg-highlight);
+  stroke: none;
+}
+.sg-brand-name {
+  font-size: 17px;
+  font-stretch: 112%;
+  font-weight: 420;
+  letter-spacing: -0.01em;
+}
+.sg-brand-name b {
+  font-weight: 760;
+}
+.sg-header-tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.sg-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-right: 8px;
+  font-size: 13px;
+  font-weight: 560;
+  color: var(--sg-band-ink-2);
+  font-variant-numeric: tabular-nums;
+}
+/* The dot is real state: filled while watching, hollow while paused */
+.sg-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--sg-highlight);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--sg-highlight) 22%, transparent);
+  transition:
+    background-color 200ms ease,
+    box-shadow 200ms ease;
+}
+.sg-status[data-tone='off'] .sg-status-dot {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--sg-band-ink-2);
+}
+.sg-status[data-tone='accent'] .sg-status-dot {
+  background: var(--sg-band-ink);
+}
+
+/* ── Buttons ──────────────────────────────────────────────────────────── */
+
+.sg-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 15px;
+  border: 1px solid transparent;
+  border-radius: var(--sg-radius);
+  background: transparent;
+  color: inherit;
+  font: 600 14px/1 var(--sg-font);
+  font-stretch: 96%;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    transform 140ms var(--sg-ease-out),
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+}
+.sg-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.sg-btn:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+.sg-btn-lg {
+  height: 44px;
+  padding: 0 22px;
+  font-size: 15px;
+}
+.sg-btn-primary {
+  background: var(--sg-accent);
+  color: var(--sg-accent-ink);
+}
+.sg-btn-secondary {
+  border-color: var(--sg-rule-strong);
+  background: var(--sg-sheet);
+  color: var(--sg-ink);
+}
+.sg-btn-text {
+  padding: 0 8px;
+  color: var(--sg-ink-2);
+  text-decoration: underline;
+  text-decoration-color: var(--sg-rule-strong);
+  text-underline-offset: 4px;
+}
+.sg-btn-band {
+  height: 32px;
+  padding: 0 11px;
+  color: var(--sg-band-ink);
+  border-color: color-mix(in srgb, var(--sg-band-ink) 22%, transparent);
+}
+.sg-btn-icon {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+}
+.sg-btn-icon,
+.sg-btn .sg-btn-icon {
+  display: inline-flex;
+}
+.sg-btn .sg-btn-icon {
+  width: auto;
+  height: auto;
+}
 .sg-icon {
   width: 16px;
   height: 16px;
@@ -111,163 +363,39 @@ body.sg-host {
   stroke-width: 1.6;
   stroke-linecap: round;
   stroke-linejoin: round;
-  vertical-align: -3px;
 }
-.sg-mark {
-  width: 22px;
-  height: 22px;
-  fill: var(--sg-accent);
-  flex: none;
+.sg-icon-lg {
+  width: 26px;
+  height: 26px;
 }
-
-/* ── Buttons ──────────────────────────────────────────────────────────── */
-
-.sg-btn {
-  appearance: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  height: 38px;
-  padding: 0 18px;
-  border: 1px solid transparent;
-  border-radius: 999px;
-  font: inherit;
-  font-size: 14px;
-  font-weight: 600;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: background-color 0.12s, border-color 0.12s, color 0.12s, transform 0.08s;
-}
-.sg-btn:active:not(:disabled) {
-  transform: scale(0.97);
-}
-.sg-btn:disabled {
-  cursor: default;
-  opacity: 0.75;
-}
-.sg-btn-primary {
-  background: var(--sg-accent);
-  color: #fff;
-}
-.sg-btn-primary:hover:not(:disabled) {
-  background: var(--sg-accent-hover);
-}
-.sg-btn-secondary {
-  background: var(--sg-bg);
-  color: var(--sg-text);
-  border-color: var(--sg-control);
-}
-.sg-btn-secondary:hover:not(:disabled) {
-  border-color: #a9a79f;
-}
-.sg-btn-quiet {
-  height: 34px;
-  padding: 0 12px;
-  background: transparent;
-  color: var(--sg-text);
-  font-weight: 500;
-}
-.sg-btn-quiet:hover {
-  background: var(--sg-panel);
-}
-.sg-btn-text {
-  padding: 0 10px;
-  background: transparent;
-  color: var(--sg-muted);
-  font-weight: 500;
-}
-.sg-btn-text:hover {
-  color: var(--sg-text);
-  text-decoration: underline;
-}
-.sg-btn-icon {
-  width: 36px;
-  height: 36px;
-  padding: 0;
-  background: transparent;
-  color: var(--sg-text);
-}
-.sg-btn-icon:hover {
-  background: var(--sg-panel);
-}
-
-/* ── Header and footer ────────────────────────────────────────────────── */
-
-.sg-header {
-  flex: none;
-  height: 56px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 0 var(--sg-edge);
-}
-.sg-brand {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 15px;
-  font-weight: 650;
-  letter-spacing: -0.01em;
-}
-.sg-header-tools {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.sg-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-right: 8px;
-  font-size: 13px;
-  color: var(--sg-muted);
-}
-.sg-status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--sg-good);
-}
-.sg-status[data-tone="off"] .sg-status-dot {
-  background: #a3a19a;
-}
-
-.sg-footer {
-  flex: none;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 4px 16px;
-  flex-wrap: wrap;
-  padding: 10px var(--sg-edge) 12px;
-  font-size: 12px;
-  color: var(--sg-muted);
-}
-.sg-footer strong {
-  color: var(--sg-text);
-  font-weight: 600;
-}
-.sg-footer-private {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.sg-footer-private .sg-icon {
-  width: 14px;
-  height: 14px;
+@media (hover: hover) and (pointer: fine) {
+  .sg-btn-primary:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--sg-accent) 86%, var(--sg-ink));
+  }
+  .sg-btn-secondary:hover:not(:disabled) {
+    border-color: var(--sg-ink-2);
+  }
+  .sg-btn-text:hover {
+    color: var(--sg-ink);
+    text-decoration-color: currentColor;
+  }
+  .sg-btn-band:hover {
+    background: color-mix(in srgb, var(--sg-band-ink) 10%, transparent);
+  }
+  .sg-btn-icon:hover {
+    background: var(--sg-sheet-2);
+  }
 }
 
 /* ── The grid: one layout per screen ──────────────────────────────────────
-   The camera and Maizy cards are never moved or re-created (the camera
-   stream and Maizy are attached to them). Each screen only changes which
-   cards are visible and where they sit, using grid-template-areas. */
+   The camera and Maizy cards are never moved in the DOM or re-created (the
+   camera stream and Maizy live in them). Each screen only changes which cards
+   are visible and where they sit, using grid-template-areas. */
 
 .sg-main {
   flex: 1;
   min-height: 0;
-  padding: 0 var(--sg-edge);
+  padding: var(--sg-gap) var(--sg-edge);
 }
 .sg-grid {
   height: 100%;
@@ -275,53 +403,55 @@ body.sg-host {
   gap: var(--sg-gap);
 }
 
-/* Welcome: text on the left, Maizy on the right */
-.sg-app[data-screen="welcome"] .sg-grid {
+/* Welcome: the sheet on the left, Maizy on the right */
+.sg-app[data-screen='welcome'] .sg-grid {
   grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
   grid-template-rows: minmax(0, 1fr);
-  grid-template-areas: "welcome maizy";
+  grid-template-areas: 'welcome maizy';
 }
-/* Calibration, dashboard, stretch: You | Maizy | ring on top, the screen's panel below */
-.sg-app:not([data-screen="welcome"]) .sg-grid {
-  grid-template-columns: minmax(0, 5fr) minmax(0, 4fr) minmax(0, 3fr);
+/* Calibration, dashboard, stretch: You | Maizy | the dial on top */
+.sg-app:not([data-screen='welcome']) .sg-grid {
+  grid-template-columns: minmax(0, 5fr) minmax(0, 4fr) minmax(0, 4fr);
 }
-/* Dashboard: the issues list needs the taller bottom row */
-.sg-app[data-screen="dashboard"] .sg-grid {
-  grid-template-rows: minmax(0, 1fr) minmax(0, 1.1fr);
+/* Dashboard: findings and the stretch slip below, the session strip along the bottom */
+.sg-app[data-screen='dashboard'] .sg-grid {
+  grid-template-rows: minmax(0, 0.9fr) minmax(0, 1.3fr) auto;
   grid-template-areas:
-    "cam maizy side"
-    "issues issues tip";
+    'cam maizy side'
+    'issues issues tip'
+    'session session session';
 }
-/* Calibration and stretch: you and Maizy get more room, the panel is short */
-.sg-app[data-screen="calibrate"] .sg-grid,
-.sg-app[data-screen="stretch"] .sg-grid {
+.sg-app[data-screen='calibrate'] .sg-grid,
+.sg-app[data-screen='stretch'] .sg-grid {
   grid-template-rows: minmax(0, 1.5fr) minmax(0, 1fr);
   grid-template-areas:
-    "cam maizy side"
-    "panel panel panel";
+    'cam maizy side'
+    'panel panel panel';
 }
 
 /* Show only the current screen's cards. display: contents lets the cards
    inside each wrapper sit directly in the grid. */
 .sg-screen,
-.sg-app:not([data-screen="welcome"]) .sg-welcome,
-.sg-app[data-screen="welcome"] .sg-camera {
+.sg-app:not([data-screen='welcome']) .sg-welcome,
+.sg-app[data-screen='welcome'] .sg-camera {
   display: none;
 }
-.sg-app[data-screen="calibrate"] .sg-screen[data-for="calibrate"],
-.sg-app[data-screen="dashboard"] .sg-screen[data-for="dashboard"],
-.sg-app[data-screen="stretch"] .sg-screen[data-for="stretch"] {
+.sg-app[data-screen='calibrate'] .sg-screen[data-for='calibrate'],
+.sg-app[data-screen='dashboard'] .sg-screen[data-for='dashboard'],
+.sg-app[data-screen='stretch'] .sg-screen[data-for='stretch'] {
   display: contents;
 }
 
-/* ── Cards ────────────────────────────────────────────────────────────── */
+/* ── Sheets (panels) ──────────────────────────────────────────────────── */
 
-.sg-card {
+.sg-sheet {
+  position: relative;
   min-width: 0;
   min-height: 0;
   overflow: hidden;
   padding: var(--sg-pad);
-  background: var(--sg-panel);
+  background: var(--sg-sheet);
+  border: 1px solid var(--sg-rule);
   border-radius: var(--sg-radius);
 }
 .sg-card-head {
@@ -329,6 +459,14 @@ body.sg-host {
   align-items: baseline;
   justify-content: space-between;
   gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--sg-ink);
+}
+.sg-count {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--sg-ink-2);
+  font-variant-numeric: tabular-nums;
 }
 .sg-actions {
   display: flex;
@@ -344,57 +482,83 @@ body.sg-host {
   display: flex;
   flex-direction: column;
   justify-content: safe center; /* "safe": if it's too tall, scroll instead of cutting off the top */
-  gap: 20px;
-  padding: 32px 36px;
+  gap: 22px;
+  padding: clamp(22px, 4cqw, 48px);
   overflow: auto;
   container-type: inline-size;
 }
 .sg-welcome-body {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 16px;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 18px;
   align-items: start;
+  padding-top: 14px;
+  border-top: 1px solid var(--sg-ink);
 }
 .sg-steps {
-  margin-top: 8px;
-  padding-left: 1.3em;
+  margin-top: 10px;
   display: grid;
-  gap: 6px;
 }
-.sg-steps li::marker {
-  color: var(--sg-muted);
+.sg-steps li {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--sg-rule);
+  color: var(--sg-ink-2);
+}
+.sg-steps li:last-child {
+  border-bottom: 0;
+}
+/* The "dose" column, like the hold/reps field on an exercise sheet */
+.sg-step-dose {
+  font-weight: 700;
+  font-stretch: 84%;
+  color: var(--sg-ink);
   font-variant-numeric: tabular-nums;
 }
 .sg-privacy {
   padding: 14px 16px;
-  background: var(--sg-bg);
-  border-radius: var(--sg-radius-sm);
+  background: var(--sg-sheet-2);
+  border-radius: var(--sg-radius);
 }
 .sg-privacy .sg-h3 {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
 }
 .sg-privacy p {
   margin-top: 6px;
-  color: var(--sg-muted);
+  color: var(--sg-ink-2);
+  font-size: 13px;
 }
 .sg-alert {
   display: grid;
   gap: 4px;
   padding: 12px 14px;
-  border-radius: var(--sg-radius-sm);
-  background: var(--sg-pill-bad-bg);
-  color: var(--sg-pill-bad-ink);
+  border: 1px solid var(--sg-bad);
+  border-radius: var(--sg-radius);
+  background: color-mix(in srgb, var(--sg-bad) 8%, var(--sg-sheet));
+  color: var(--sg-ink);
+}
+.sg-alert strong {
+  color: var(--sg-bad);
+}
+
+/* The welcome sheet stacks its two columns when it gets narrow */
+@container (max-width: 380px) {
+  .sg-welcome-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 /* ── Camera slot ──────────────────────────────────────────────────────── */
 
 .sg-camera {
   grid-area: cam;
-  position: relative;
   padding: 0;
   background: var(--sg-camera-bg);
+  border-color: transparent;
 }
 /* Video and overlay are stacked exactly, cropped the same way, and mirrored. */
 .sg-camera video,
@@ -413,20 +577,39 @@ body.sg-host {
   position: absolute;
   inset: 0;
   display: grid;
-  place-items: center;
+  place-content: center;
+  justify-items: center;
+  gap: 8px;
   font-size: 13px;
-  color: #cfcdc5;
+  color: #a7b3aa;
+}
+/* Viewfinder corners: the camera is a measuring instrument here, not a video call */
+.sg-viewfinder {
+  position: absolute;
+  inset: 12px;
+  pointer-events: none;
+  --c: rgb(238 243 236 / 0.75);
+  background:
+    linear-gradient(var(--c), var(--c)) top left / 16px 1.5px,
+    linear-gradient(var(--c), var(--c)) top left / 1.5px 16px,
+    linear-gradient(var(--c), var(--c)) top right / 16px 1.5px,
+    linear-gradient(var(--c), var(--c)) top right / 1.5px 16px,
+    linear-gradient(var(--c), var(--c)) bottom left / 16px 1.5px,
+    linear-gradient(var(--c), var(--c)) bottom left / 1.5px 16px,
+    linear-gradient(var(--c), var(--c)) bottom right / 16px 1.5px,
+    linear-gradient(var(--c), var(--c)) bottom right / 1.5px 16px;
+  background-repeat: no-repeat;
 }
 .sg-chip {
   position: absolute;
-  left: 12px;
-  bottom: 12px;
+  left: 14px;
+  bottom: 14px;
   padding: 4px 10px;
   border-radius: 999px;
-  background: rgba(20, 20, 18, 0.75);
-  color: #fff;
+  background: rgb(14 20 17 / 0.82);
+  color: #eef3ec;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 /* ── Maizy slot ───────────────────────────────────────────────────────── */
@@ -436,6 +619,30 @@ body.sg-host {
   padding: 0;
   display: flex;
 }
+/* A height rule up the left edge, like the pencil marks on a doorframe */
+.sg-height-rule {
+  position: absolute;
+  top: 14px;
+  bottom: 14px;
+  left: 12px;
+  width: 9px;
+  pointer-events: none;
+  border-left: 1px solid var(--sg-rule-strong);
+  background:
+    repeating-linear-gradient(
+        to bottom,
+        var(--sg-rule-strong) 0 1px,
+        transparent 1px 10px
+      )
+      left top / 5px 100% no-repeat,
+    repeating-linear-gradient(
+        to bottom,
+        var(--sg-ink-3) 0 1px,
+        transparent 1px 50px
+      )
+      left top / 9px 100% no-repeat;
+  opacity: 0.8;
+}
 #maizy {
   position: relative;
   flex: 1;
@@ -443,505 +650,1238 @@ body.sg-host {
   min-height: 0;
 }
 
-/* ── Ring card (score, calibration, countdown) ────────────────────────── */
+/* ── The side column: score, calibration dial, stretch countdown ─────── */
 
 .sg-side {
   grid-area: side;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 6px;
+  align-items: flex-start;
+  gap: 4px;
   container-type: size;
 }
-.sg-side .sg-label {
-  align-self: stretch;
+.sg-side .sg-verdict {
+  margin-top: auto;
 }
-.sg-ring {
-  --ring: var(--sg-accent);
+.sg-scorecard .sg-verdict {
+  margin-top: 6px;
+}
+
+/* Dials (calibration, stretch): a ring of ticks like a stopwatch's minute track */
+.sg-dial-wrap {
   position: relative;
-  flex: none;
-  width: min(156px, 86cqw, calc(100cqh - 98px)); /* 98px = label + verdict + subline */
+  align-self: center;
+  width: min(100%, 64cqh, 220px);
   aspect-ratio: 1;
-  margin: auto 0;
-  container-type: inline-size;
-}
-.sg-ring[data-tone="good"] {
-  --ring: var(--sg-good);
-}
-.sg-ring[data-tone="ok"] {
-  --ring: var(--sg-ok);
-}
-.sg-ring[data-tone="bad"] {
-  --ring: var(--sg-bad);
-}
-.sg-ring[data-tone="none"] {
-  --ring: var(--sg-muted);
-}
-.sg-ring svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-  transform: rotate(-90deg);
-}
-.sg-ring-track,
-.sg-ring-bar {
-  fill: none;
-  stroke-width: 10;
-}
-.sg-ring-track {
-  stroke: var(--sg-panel-2);
-}
-.sg-ring-bar {
-  stroke: var(--ring);
-  stroke-linecap: round;
-  stroke-dasharray: 100;
-  stroke-dashoffset: 100;
-  transition: stroke-dashoffset 0.35s ease, stroke 0.35s;
-}
-/* An empty ring would still show a round dot, so hide it */
-.sg-ring-bar:not([data-offset]),
-.sg-ring-bar[data-offset="100.0"] {
-  opacity: 0;
-}
-.sg-ring-center {
-  position: absolute;
-  inset: 0;
+  margin: 2px 0 6px;
   display: grid;
   place-items: center;
+  --dial: var(--sg-accent);
 }
-.sg-ring-value {
-  font-size: 32cqi;
-  font-weight: 600;
+.sg-dial-wrap[data-tone='good'] {
+  --dial: var(--sg-good);
+}
+.sg-dial-wrap[data-tone='bad'] {
+  --dial: var(--sg-bad);
+}
+.sg-dial,
+.sg-dial-arc,
+.sg-dial-check {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.sg-tick {
+  stroke: var(--sg-rule-strong);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  transition: stroke 160ms ease;
+}
+.sg-tick-major {
+  stroke: var(--sg-ink-3);
+  stroke-width: 2;
+}
+.sg-tick.is-on {
+  stroke: var(--dial);
+  stroke-width: 2.4;
+}
+.sg-dial-value {
+  position: relative;
+  font-size: clamp(34px, 20cqh, 72px);
+  font-stretch: 70%;
+  font-weight: 700;
   line-height: 1;
-  letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
-  color: var(--ring);
+  color: var(--sg-ink);
 }
-.sg-ring[data-tone="accent"] .sg-ring-value {
-  color: var(--sg-text);
-}
-.sg-ring[data-tone="none"] .sg-ring-value {
-  font-size: 22cqi;
-  font-weight: 500;
-  color: var(--sg-muted);
-}
-/* The tick shown when calibration is done */
-.sg-ring-value[data-icon="check"]::before {
-  content: "";
-  display: block;
-  width: 36cqi;
-  height: 36cqi;
-  background: var(--sg-good);
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / contain no-repeat;
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / contain no-repeat;
-}
-.sg-verdict {
-  font-size: 16px;
-  font-weight: 600;
-  line-height: 1.3;
-}
-.sg-subverdict {
-  font-size: 13px;
-  color: var(--sg-muted);
-  line-height: 1.35;
-  max-width: 24ch;
-  min-height: 2.7em; /* keeps the ring still when this text changes length */
-}
-
-/* ── 2. Calibration panel ─────────────────────────────────────────────── */
-
-.sg-panel {
-  grid-area: panel;
-}
-.sg-calib {
-  display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
-  align-items: center;
-  gap: 24px 32px;
-  padding: 24px 28px;
-}
-.sg-tips {
-  margin-top: 12px;
-  padding-left: 1.1em;
-  display: grid;
-  gap: 6px;
-  font-size: 15px;
-}
-.sg-calib-action {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 14px;
-}
-.sg-calib-message {
-  font-size: 15px;
-  max-width: 40ch;
-}
-.sg-calib-message[data-tone="bad"] {
+.sg-dial-wrap[data-tone='bad'] .sg-dial-value {
   color: var(--sg-bad);
 }
 
-/* ── 3. Dashboard: issues and suggested stretch ───────────────────────── */
+/* Idle calibration: a slow breathing disc behind the "3" shows the pace to sit tall to */
+.sg-breath {
+  position: absolute;
+  inset: 26%;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--sg-highlight) 55%, transparent);
+  opacity: 0;
+  transform: scale(0.82);
+  transition: opacity 300ms ease;
+}
+.sg-dial-wrap[data-phase='idle'] .sg-breath {
+  opacity: 0.7;
+  animation: sg-breathe 5.5s var(--sg-ease-in-out) infinite alternate;
+}
+.sg-dial-wrap[data-phase='running'] .sg-breath {
+  opacity: 0.45;
+  transform: scale(1);
+}
+@keyframes sg-breathe {
+  from {
+    transform: scale(0.82);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+/* Done: a check draws itself */
+.sg-dial-check {
+  inset: 30%;
+  width: 40%;
+  height: 40%;
+  fill: none;
+  stroke: var(--sg-good);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.sg-draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+.sg-dial-wrap[data-phase='done'] .sg-dial-check .sg-draw {
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset 520ms var(--sg-ease-out) 80ms;
+}
+.sg-dial-wrap:not([data-phase='done']) .sg-dial-check {
+  visibility: hidden;
+}
+
+/* Stretch: the arc that empties as the step runs out */
+.sg-dial-arc {
+  transform: rotate(-90deg);
+}
+.sg-dial-arc circle {
+  fill: none;
+  stroke: var(--dial);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 100;
+  transition: stroke-dashoffset 1s linear;
+}
+.sg-dial-big {
+  font-size: clamp(44px, 26cqh, 96px);
+  font-weight: 640;
+  font-stretch: 64%;
+  letter-spacing: -0.02em;
+}
+
+.sg-step-dots {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+.sg-step-dots li {
+  width: 22px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--sg-rule);
+  transition:
+    background-color 240ms ease,
+    transform 240ms var(--sg-ease-out);
+  transform-origin: left center;
+}
+.sg-step-dots li[data-state='done'] {
+  background: var(--sg-ink-3);
+}
+.sg-step-dots li[data-state='now'] {
+  background: var(--sg-accent);
+  transform: scaleX(1.5);
+  margin-right: 11px;
+}
+
+/* ── Score card ───────────────────────────────────────────────────────── */
+
+.sg-scorecard {
+  --tone: var(--sg-ink-3);
+}
+.sg-scorecard[data-tone='good'] {
+  --tone: var(--sg-good);
+}
+.sg-scorecard[data-tone='ok'] {
+  --tone: var(--sg-ok);
+}
+.sg-scorecard[data-tone='bad'] {
+  --tone: var(--sg-bad);
+}
+.sg-score {
+  display: flex;
+  align-items: flex-end;
+  height: clamp(44px, 34cqh, 112px);
+  font-size: clamp(44px, 34cqh, 112px);
+  line-height: 1;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  /* The signature: the number sits up straight when you do (tall and narrow when good,
+     wide and heavy-set when you slump). One transition, only when the tone changes. */
+  font-stretch: 100%;
+  transition:
+    font-stretch 600ms var(--sg-ease-in-out),
+    font-weight 600ms var(--sg-ease-in-out);
+}
+.sg-scorecard[data-tone='good'] .sg-score {
+  font-stretch: 64%;
+  font-weight: 760;
+}
+.sg-scorecard[data-tone='ok'] .sg-score {
+  font-stretch: 88%;
+  font-weight: 640;
+}
+.sg-scorecard[data-tone='bad'] .sg-score {
+  font-stretch: 120%;
+  font-weight: 520;
+}
+.sg-score-digits {
+  display: flex;
+}
+/* Each digit is a window onto a 0-9 strip; the strip slides, so digits roll */
+.sg-digit {
+  display: block;
+  height: 1em;
+  overflow: hidden;
+}
+.sg-digit-strip {
+  display: flex;
+  flex-direction: column;
+  transition: transform 260ms var(--sg-ease-out);
+}
+.sg-digit-strip span {
+  display: block;
+  height: 1em;
+  line-height: 1;
+}
+.sg-score-none {
+  color: var(--sg-ink-3);
+  font-weight: 300;
+}
+
+/* The ruler and its needle */
+.sg-gauge {
+  position: relative;
+  align-self: stretch;
+  margin: auto 0 0;
+  padding-top: 12px;
+}
+.sg-ruler {
+  display: block;
+  width: 100%;
+  height: 12px;
+  overflow: visible;
+}
+.sg-ruler-labels {
+  position: relative;
+  display: block;
+  height: 14px;
+  margin-top: 3px;
+}
+.sg-ruler-labels span {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 14px;
+  color: var(--sg-ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.sg-ruler-labels span:first-child {
+  transform: none;
+}
+.sg-ruler-labels span:last-child {
+  transform: translateX(-100%);
+}
+.sg-zone {
+  opacity: 0.9;
+}
+.sg-zone-bad {
+  fill: var(--sg-zone-bad);
+}
+.sg-zone-ok {
+  fill: var(--sg-zone-ok);
+}
+.sg-zone-good {
+  fill: var(--sg-zone-good);
+}
+.sg-rule-minor,
+.sg-rule-major {
+  stroke: var(--sg-ink-3);
+  stroke-width: 0.6;
+  vector-effect: non-scaling-stroke;
+}
+.sg-rule-major {
+  stroke: var(--sg-ink);
+  stroke-width: 1;
+}
+/* The rail spans the ruler; translateX(n%) of the rail = n% along the ruler */
+.sg-needle-rail {
+  position: absolute;
+  left: 0;
+  top: 6px;
+  width: 100%;
+  height: 22px;
+  pointer-events: none;
+  will-change: transform;
+}
+.sg-needle {
+  position: absolute;
+  left: -1.5px;
+  top: 0;
+  width: 3px;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--tone);
+  transition: background-color 300ms ease;
+}
+.sg-needle::before {
+  content: '';
+  position: absolute;
+  left: -4px;
+  top: -2px;
+  border: 5.5px solid transparent;
+  border-top: 6px solid var(--tone);
+  transition: border-color 300ms ease;
+}
+.sg-scorecard[data-tone='none'] .sg-needle-rail {
+  opacity: 0;
+}
+.sg-scorecard .sg-verdict {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sg-scorecard .sg-verdict::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  flex: none;
+  border-radius: 2px;
+  background: var(--tone);
+  transition: background-color 300ms ease;
+}
+
+/* "Recovered" after a lasting problem was fixed */
+.sg-recovered {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--sg-good);
+  animation: sg-recover-in 420ms var(--sg-ease-out) both;
+}
+.sg-recovered svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.sg-recovered .sg-draw {
+  animation: sg-draw 520ms var(--sg-ease-out) 120ms forwards;
+}
+@keyframes sg-recover-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+@keyframes sg-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* ── Findings ─────────────────────────────────────────────────────────── */
 
 .sg-issues {
   grid-area: issues;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  padding-bottom: 8px;
 }
-.sg-count {
-  font-size: 13px;
-  color: var(--sg-muted);
-  font-variant-numeric: tabular-nums;
+.sg-issues-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 16px;
+}
+.sg-issues-main {
+  min-height: 0;
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--sg-rule-strong) transparent;
 }
 .sg-empty {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
+  display: grid;
   gap: 12px;
-  padding: 16px 18px;
-  border: 1px dashed var(--sg-control);
-  border-radius: var(--sg-radius-sm);
-}
-.sg-empty p {
-  font-size: 15px;
+  justify-items: start;
+  padding: 16px 0;
   max-width: 48ch;
+  color: var(--sg-ink-2);
 }
 .sg-issue-list {
-  list-style: none;
-  margin: 0 -8px;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  overflow: auto;
-  min-height: 0;
-}
-/* One row per posture check. data-state: "fine" | "active" | "sustained" */
-.sg-issue {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(70px, 150px) 132px;
-  align-items: center;
-  gap: 16px;
-  min-height: 44px;
-  padding: 4px 12px 4px 8px;
-  border-radius: var(--sg-radius-sm);
-  line-height: 1.3;
 }
-.sg-issue[data-state="active"],
-.sg-issue[data-state="sustained"] {
-  background: var(--sg-bg);
+.sg-issue {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(40px, 120px) 156px; /* fixed, so every row's scale lines up */
+  align-items: center;
+  gap: 14px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--sg-rule);
+}
+.sg-issue:last-child {
+  border-bottom: 0;
 }
 .sg-issue-names {
-  display: flex;
-  flex-direction: column;
+  display: grid;
   min-width: 0;
 }
 .sg-issue-title {
-  font-weight: 600;
+  position: relative;
+  justify-self: start;
+  max-width: 100%;
+  font-weight: 650;
+  font-size: 13.5px;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.sg-issue[data-state="fine"] .sg-issue-title {
-  font-weight: 500;
+.sg-issue-title-text {
+  position: relative;
+}
+/* The highlighter swipe: sweeps in from the left when an issue switches on */
+.sg-hl {
+  position: absolute;
+  left: -3px;
+  right: -3px;
+  top: 52%;
+  bottom: -1px;
+  background: var(--sg-highlight);
+  opacity: var(--sg-hl-alpha);
+  border-radius: 2px 6px 3px 5px;
+  transform: scaleX(0) rotate(-0.6deg);
+  transform-origin: left center;
+  transition: transform 160ms var(--sg-ease-out);
+}
+.sg-issue:not([data-state='fine'], [data-state='recovered']) .sg-hl {
+  transform: scaleX(1) rotate(-0.6deg);
+  transition-duration: 460ms;
 }
 .sg-issue-plain {
-  font-size: 13px;
-  color: var(--sg-muted);
-}
-.sg-bar {
-  height: 8px;
-  border-radius: 999px;
-  background: var(--sg-panel-2);
+  font-size: 12.5px;
+  color: var(--sg-ink-2);
   overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sg-issue[data-state='fine'] .sg-issue-title {
+  font-weight: 520;
+  color: var(--sg-ink-2);
+}
+
+/* Severity: a little scale with ticks at every tenth, filled from the left */
+.sg-bar {
+  position: relative;
+  height: 10px;
+  background:
+    repeating-linear-gradient(
+        to right,
+        var(--sg-rule-strong) 0 1px,
+        transparent 1px 10%
+      )
+      left bottom / 100% 4px no-repeat,
+    linear-gradient(var(--sg-rule-strong), var(--sg-rule-strong)) left bottom /
+      100% 1px no-repeat;
 }
 .sg-bar-fill {
-  display: block;
-  height: 100%;
-  background: #a9a79f; /* fine: grey */
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 6px;
+  border-radius: 0 2px 2px 0;
+  background: var(--sg-rule-strong);
   transform: scaleX(0);
   transform-origin: left center;
-  transition: transform 0.2s linear, background-color 0.3s;
+  transition:
+    transform 240ms var(--sg-ease-out),
+    background-color 240ms ease;
 }
-.sg-issue[data-state="active"] .sg-bar-fill {
+.sg-issue[data-state='active'] .sg-bar-fill {
   background: var(--sg-ok);
 }
-.sg-issue[data-state="sustained"] .sg-bar-fill {
+.sg-issue[data-state='sustained'] .sg-bar-fill {
   background: var(--sg-bad);
 }
+
 .sg-issue-meta {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
+  font-size: 12.5px;
+  color: var(--sg-ink-2);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.sg-issue[data-state='fine'] .sg-issue-time {
+  color: var(--sg-ink-3);
 }
 .sg-pill {
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--sg-pill-bad-bg);
-  color: var(--sg-pill-bad-ink);
-  font-size: 12px;
-  font-weight: 600;
+  position: relative;
+  padding: 1px 7px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--sg-bad);
 }
-.sg-issue-time {
-  min-width: 44px;
-  text-align: right;
-  font-size: 13px;
-  color: var(--sg-muted);
-  font-variant-numeric: tabular-nums;
+/* The red-pen ring round "Sustained" draws itself once */
+.sg-pen {
+  position: absolute;
+  inset: -5px -7px;
+  width: calc(100% + 14px);
+  height: calc(100% + 10px);
+  overflow: visible;
+  fill: none;
+  stroke: var(--sg-bad);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
 }
+.sg-pen .sg-draw {
+  animation: sg-draw 620ms var(--sg-ease-out) forwards;
+}
+.sg-issue-check {
+  display: none;
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: var(--sg-good);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.sg-issue[data-state='recovered'] .sg-issue-check {
+  display: block;
+}
+.sg-issue[data-state='recovered'] .sg-issue-check .sg-draw {
+  animation: sg-draw 520ms var(--sg-ease-out) forwards;
+}
+.sg-issue[data-state='recovered'] .sg-issue-time {
+  color: var(--sg-good);
+  font-weight: 650;
+}
+
+/* Body chart beside the findings */
+.sg-figure-slot {
+  display: flex;
+  align-items: center;
+  padding: 6px 0;
+}
+.sg-figure {
+  height: 100%;
+  max-height: 300px;
+  aspect-ratio: 150 / 156;
+}
+.sg-figure-svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.sg-figure-svg rect {
+  fill: var(--sg-sheet-2);
+  stroke: var(--sg-ink-2);
+  stroke-width: 0.9;
+}
+.sg-fig-head {
+  fill: var(--sg-sheet);
+  stroke: var(--sg-ink);
+  stroke-width: 1.4;
+}
+.sg-fig-bone,
+.sg-fig-shoulders,
+.sg-fig-eye,
+.sg-fig-level {
+  stroke: var(--sg-ink);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+}
+.sg-fig-faint,
+.sg-fig-level {
+  stroke: var(--sg-rule-strong);
+  stroke-dasharray: 2 3;
+  stroke-width: 1;
+}
+.sg-fig-shoulders {
+  stroke-width: 2.4;
+}
+.sg-fig-joint {
+  fill: var(--sg-ink);
+}
+.sg-fig-floor {
+  stroke: var(--sg-rule-strong);
+  stroke-width: 1;
+}
+.sg-figure-svg .sg-fig-screen {
+  fill: var(--sg-ink-3);
+  stroke: none;
+}
+.sg-figure [data-bend] {
+  transition: transform 300ms var(--sg-ease-out);
+}
+.sg-figure [data-bend='too_close'] {
+  transform-box: fill-box;
+}
+/* A part with a problem turns the colour of its finding */
+.sg-fig-part[data-state='active'] > [data-bend] > :is(rect, circle, line),
+.sg-fig-part[data-state='active'] > :is(rect) {
+  stroke: var(--sg-ok);
+}
+.sg-fig-part[data-state='sustained'] > [data-bend] > :is(rect, circle, line),
+.sg-fig-part[data-state='sustained'] > :is(rect) {
+  stroke: var(--sg-bad);
+}
+.sg-fig-part[data-part='too_close'][data-state='active'] .sg-fig-screen {
+  fill: var(--sg-ok);
+}
+.sg-fig-part[data-part='too_close'][data-state='sustained'] .sg-fig-screen {
+  fill: var(--sg-bad);
+}
+
+/* ── The stretch slip ─────────────────────────────────────────────────── */
 
 .sg-tip {
   grid-area: tip;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
+  border-top: 3px solid var(--sg-accent);
+  container-type: size;
 }
-.sg-tip .sg-h3 {
+/* The routine, step by step, when there's room for it */
+.sg-tip-steps {
+  display: grid;
+  gap: 4px;
   margin-top: 4px;
-  font-size: 16px;
+  counter-reset: sg-step;
+  font-size: 12.5px;
+  color: var(--sg-ink-2);
+}
+.sg-tip-steps li {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  gap: 8px;
+  counter-increment: sg-step;
+}
+.sg-tip-steps li::before {
+  content: counter(sg-step);
+  font-weight: 700;
+  color: var(--sg-ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.sg-tip-step-s {
+  font-weight: 650;
+  color: var(--sg-ink);
+  font-variant-numeric: tabular-nums;
+}
+@container (max-height: 380px) {
+  .sg-tip-steps {
+    display: none;
+  }
+}
+/* A short slip keeps the name, the dose and Start; the description goes first */
+@container (max-height: 290px) {
+  .sg-tip-how {
+    display: none;
+  }
+}
+.sg-tip > * {
+  flex-shrink: 0;
+}
+.sg-tip-name {
+  margin-top: 2px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 .sg-tip-for {
   font-size: 13px;
-  color: var(--sg-muted);
+  font-weight: 600;
+  color: var(--sg-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sg-tip-for:not(:empty) {
+  justify-self: start;
 }
 .sg-tip-how {
-  margin-top: 6px;
-  display: -webkit-box;
-  -webkit-line-clamp: 4;
-  -webkit-box-orient: vertical;
+  font-size: 13px;
+  color: var(--sg-ink-2);
+  text-wrap: pretty;
   overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+/* Dose fields, like the hold / sets / reps boxes on an exercise sheet */
+.sg-dose {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: auto;
+  border-top: 1px solid var(--sg-rule);
+  border-bottom: 1px solid var(--sg-rule);
+}
+.sg-dose > div {
+  padding: 6px 8px 6px 0;
+}
+.sg-dose > div + div {
+  padding-left: 10px;
+  border-left: 1px solid var(--sg-rule);
+}
+.sg-dose dt,
+.sg-stats dt {
+  font-size: 11.5px;
+  font-weight: 560;
+  color: var(--sg-ink-3);
+}
+.sg-dose dd {
+  font-size: 16px;
+  font-stretch: 84%;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 .sg-tip-foot {
-  margin-top: auto;
-  padding-top: 10px;
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 6px 12px;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 6px;
+}
+.sg-tip-foot .sg-btn {
+  min-width: 96px;
 }
 
-/* ── 4. Guided stretch panel ──────────────────────────────────────────── */
+/* ── Session strip ────────────────────────────────────────────────────── */
 
-.sg-guide {
+.sg-session {
+  grid-area: session;
   display: grid;
-  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
-  gap: 16px 32px;
-  padding: 22px 28px;
+  gap: 24px;
+  padding-block: 10px;
+}
+.sg-stats {
+  display: flex;
+  gap: 26px;
+}
+.sg-stats dd {
+  font-size: 20px;
+  font-stretch: 76%;
+  font-weight: 700;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.sg-spark-wrap {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.sg-spark-label {
+  font-size: 11.5px;
+  font-weight: 560;
+  color: var(--sg-ink-3);
+  line-height: 1.2;
+}
+.sg-spark {
+  display: block;
+  width: 100%;
+  height: 40px;
+  overflow: visible;
+  cursor: crosshair;
+}
+.sg-spark-grid {
+  stroke: var(--sg-rule);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  vector-effect: non-scaling-stroke;
+}
+.sg-spark-line {
+  fill: none;
+  stroke: var(--sg-accent);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+.sg-spark-area {
+  fill: color-mix(in srgb, var(--sg-accent) 9%, transparent);
+}
+.sg-spark-dot {
+  fill: var(--sg-accent);
+  stroke: var(--sg-sheet);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+.sg-spark-cross {
+  stroke: var(--sg-ink-2);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  opacity: 0;
+}
+.sg-spark[data-hover='true'] .sg-spark-cross {
+  opacity: 1;
+}
+.sg-spark-tip {
+  position: absolute;
+  right: 0;
+  top: -20px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--sg-ink);
+  color: var(--sg-sheet);
+  font-size: 11.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+.sg-spark-wrap:has(.sg-spark[data-hover='true']) .sg-spark-tip {
+  opacity: 1;
+}
+.sg-spark[data-empty='true']
+  :is(.sg-spark-line, .sg-spark-area, .sg-spark-dot) {
+  display: none;
+}
+.sg-spark-empty {
+  position: absolute;
+  right: 0;
+  font-size: 12px;
+  color: var(--sg-ink-3);
+  pointer-events: none;
+}
+.sg-spark-wrap:has(.sg-spark[data-empty='false']) .sg-spark-empty {
+  display: none;
+}
+
+/* ── Calibration and stretch panels ───────────────────────────────────── */
+
+.sg-panel {
+  grid-area: panel;
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 28px;
+  align-items: safe center;
+  padding: 22px 26px;
+  overflow: auto; /* a long step scrolls inside the sheet instead of being cut off */
+}
+.sg-tips {
+  margin-top: 12px;
+  display: grid;
+  gap: 6px;
+  color: var(--sg-ink-2);
+}
+.sg-tips li {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 8px;
+}
+/* A tick box in front of each tip, like a checklist on a form */
+.sg-tips li::before {
+  content: '';
+  width: 12px;
+  height: 12px;
+  margin-top: 4px;
+  border: 1.4px solid var(--sg-ink-3);
+  border-radius: 2px;
+}
+.sg-calib-action,
+.sg-guide-action {
+  display: grid;
+  gap: 14px;
+  justify-items: start;
+  padding-left: 24px;
+  border-left: 1px solid var(--sg-rule);
+}
+.sg-calib-message {
+  font-weight: 560;
+  text-wrap: pretty;
+}
+.sg-calib-message[data-tone='bad'] {
+  color: var(--sg-bad);
 }
 .sg-step-text {
-  margin-top: 8px;
-  max-width: 40ch;
-  font-size: 22px;
-  font-weight: 500;
+  margin-top: 10px;
+  font-size: clamp(17px, 2.4cqw, 26px);
+  font-stretch: 92%;
+  font-weight: 560;
   line-height: 1.3;
-  letter-spacing: -0.01em;
+  text-wrap: pretty;
 }
 .sg-next {
-  margin-top: 8px;
-  color: var(--sg-muted);
-}
-.sg-guide-action {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 14px;
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--sg-ink-2);
 }
 .sg-safety {
-  max-width: 34ch;
-  font-size: 14px;
+  font-size: 13px;
+  color: var(--sg-ink-2);
 }
 
-/* ── 5. Settings panel ────────────────────────────────────────────────── */
+/* ── Footer ───────────────────────────────────────────────────────────── */
+
+.sg-footer {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 18px;
+  padding: 0 var(--sg-edge) 10px;
+  font-size: 12px;
+  color: var(--sg-ink-2);
+}
+.sg-footer-right {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  white-space: nowrap;
+}
+.sg-keys {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.sg-keys kbd + kbd,
+.sg-keys kbd:not(:first-child) {
+  margin-left: 6px;
+}
+.sg-footer-private {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* ── 5. Settings sheet ────────────────────────────────────────────────── */
 
 .sg-scrim {
   position: absolute;
   inset: 0;
   z-index: 10;
-  background: rgba(31, 32, 29, 0.3);
+  background: rgb(10 20 15 / 0.32);
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+.sg-scrim[data-open='true'] {
+  opacity: 1;
 }
 .sg-settings {
   position: absolute;
+  z-index: 11;
   top: 8px;
   right: 8px;
   bottom: 8px;
-  z-index: 11;
-  width: min(360px, calc(100% - 16px));
-  display: flex;
-  flex-direction: column;
-  padding: 18px 24px 20px;
+  width: min(380px, calc(100% - 16px));
   overflow: auto;
-  background: var(--sg-bg);
+  padding: 18px 22px 22px;
+  background: var(--sg-sheet);
   border-radius: var(--sg-radius);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18); /* it floats, so it gets a shadow */
-  animation: sg-slide-in 0.18s ease-out;
+  box-shadow: var(--sg-shadow);
+  transform: translateX(calc(100% + 16px));
+  /* Closing: quick and plain, back out the way it came */
+  transition: transform 220ms var(--sg-ease-out);
 }
-@keyframes sg-slide-in {
-  from {
-    opacity: 0;
-    transform: translateX(16px);
-  }
+.sg-settings[data-open='true'] {
+  transform: none;
+  /* Opening: a spring with a little give (damping 0.8, response 0.3) */
+  transition: transform var(--sg-spring-ms, 380ms)
+    var(--sg-spring, var(--sg-ease-drawer));
+}
+/* Opened with a keyboard shortcut: no animation for something you do many times a day */
+.sg-settings[data-instant='true'],
+.sg-scrim:has(+ .sg-settings[data-instant='true']) {
+  transition: none;
 }
 .sg-settings-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 6px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--sg-ink);
 }
 .sg-setting {
+  display: grid;
+  gap: 6px;
   padding: 16px 0;
-  border-top: 1px solid var(--sg-line);
+  border-bottom: 1px solid var(--sg-rule);
+}
+.sg-setting:last-child {
+  border-bottom: 0;
 }
 .sg-setting-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  min-height: 38px;
 }
 .sg-setting-title {
-  font-weight: 600;
+  font-weight: 650;
 }
 .sg-setting-value {
   font-size: 13px;
-  color: var(--sg-muted);
+  font-weight: 650;
+  color: var(--sg-accent);
 }
 .sg-setting-desc {
-  margin-top: 4px;
-  font-size: 13px;
-  color: var(--sg-muted);
+  font-size: 12.5px;
+  color: var(--sg-ink-2);
+}
+
+/* Voice switch */
+.sg-switch {
+  appearance: none;
+  position: relative;
+  width: 40px;
+  height: 24px;
+  margin: 0;
+  border-radius: 999px;
+  background: var(--sg-rule-strong);
+  cursor: pointer;
+  transition: background-color 180ms ease;
+}
+.sg-switch::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--sg-sheet);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
+  transition: transform 220ms var(--sg-ease-out);
+}
+.sg-switch:checked {
+  background: var(--sg-accent);
+}
+.sg-switch:checked::after {
+  transform: translateX(16px);
+}
+.sg-switch:active::after {
+  transform: scaleX(1.12);
+}
+.sg-switch:checked:active::after {
+  transform: translateX(14px) scaleX(1.12);
+}
+
+/* Camera picker */
+.sg-select {
+  max-width: 60%;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--sg-rule-strong);
+  border-radius: var(--sg-radius);
+  background: var(--sg-sheet);
+  color: var(--sg-ink);
+  font: 500 13px var(--sg-font);
+  text-overflow: ellipsis;
+}
+.sg-setting-error {
+  color: var(--sg-bad);
+}
+
+/* Sensitivity: a slider over a little ruler */
+.sg-range-wrap {
+  position: relative;
+  padding-bottom: 6px;
 }
 .sg-range {
+  --fill: 50%;
+  appearance: none;
   width: 100%;
-  margin: 8px 0 2px;
-  accent-color: var(--sg-accent);
+  height: 22px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.sg-range::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(
+    to right,
+    var(--sg-accent) var(--fill),
+    var(--sg-rule-strong) var(--fill)
+  );
+}
+.sg-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  margin-top: -7px;
+  border: 2px solid var(--sg-accent);
+  border-radius: 50%;
+  background: var(--sg-sheet);
+  transition: transform 140ms var(--sg-ease-out);
+}
+.sg-range:active::-webkit-slider-thumb {
+  transform: scale(1.12);
+}
+.sg-range-ticks {
+  position: absolute;
+  left: 9px;
+  right: 9px;
+  bottom: 0;
+  height: 5px;
+  background: repeating-linear-gradient(
+    to right,
+    var(--sg-rule-strong) 0 1px,
+    transparent 1px 5%
+  );
+  pointer-events: none;
 }
 .sg-range-ends {
   display: flex;
   justify-content: space-between;
   font-size: 12px;
-  color: var(--sg-muted);
+  color: var(--sg-ink-3);
 }
-/* On/off switch built from a checkbox */
-.sg-switch {
-  appearance: none;
-  position: relative;
-  flex: none;
-  width: 36px;
-  height: 20px;
-  margin: 0;
-  border-radius: 999px;
-  background: var(--sg-control);
-  cursor: pointer;
-  transition: background-color 0.15s;
+.sg-shortcuts {
+  display: grid;
+  gap: 6px;
+  margin: 4px 0;
 }
-.sg-switch::after {
-  content: "";
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: #fff;
-  transition: transform 0.15s;
+.sg-shortcuts > div {
+  display: grid;
+  grid-template-columns: 90px minmax(0, 1fr);
+  align-items: center;
+  font-size: 13px;
+  color: var(--sg-ink-2);
 }
-.sg-switch:checked {
-  background: var(--sg-text);
-}
-.sg-switch:checked::after {
-  transform: translateX(16px);
+.sg-shortcuts dt {
+  color: var(--sg-ink-3);
+  font-size: 12px;
 }
 
 /* ── Smaller windows ──────────────────────────────────────────────────── */
 
-@container sg-app (max-width: 900px) {
-  .sg-header,
-  .sg-main,
-  .sg-footer {
-    --sg-edge: 16px;
-  }
-  .sg-grid {
-    --sg-gap: 12px;
-  }
-  .sg-card {
-    --sg-pad: 16px;
-  }
-  .sg-app[data-screen="welcome"] .sg-grid {
-    grid-template-columns: minmax(0, 8fr) minmax(0, 4fr);
-  }
-  .sg-welcome {
-    padding: 24px 26px;
-    gap: 16px;
-  }
-  .sg-title {
-    font-size: 26px;
-  }
-  .sg-calib,
-  .sg-guide {
-    padding: 16px 22px;
-  }
-  .sg-step-text {
-    font-size: 19px;
-  }
+@container sg-app (max-width: 1080px) {
   .sg-issue {
-    gap: 12px;
+    grid-template-columns: minmax(0, 1fr) minmax(28px, 84px) 150px;
+    gap: 10px;
+  }
+  .sg-stats {
+    gap: 18px;
   }
 }
 
-@container sg-app (max-height: 640px) {
-  .sg-header {
-    height: 50px;
+@container sg-app (max-width: 900px) {
+  .sg-app {
+    --sg-pad: 14px;
+    --sg-gap: 10px;
+    --sg-edge: 12px;
   }
-  /* Keep all five posture checks visible on short windows */
-  .sg-app[data-screen="dashboard"] .sg-grid {
-    grid-template-rows: minmax(0, 1fr) minmax(0, 1.25fr);
+  .sg-figure-slot {
+    display: none;
   }
-  .sg-issues {
-    gap: 4px;
+  .sg-issues-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .sg-panel {
+    gap: 18px;
+    padding: 16px 18px;
+  }
+  .sg-keys {
+    display: none;
+  }
+}
+
+@container sg-app (max-width: 1000px) {
+  .sg-app[data-screen='welcome'] .sg-grid {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  }
+}
+
+@container sg-app (max-height: 660px) {
+  .sg-app {
+    --sg-header-h: 42px;
   }
   .sg-welcome {
     gap: 14px;
     padding-block: 22px;
   }
   .sg-title {
-    font-size: 24px;
+    font-size: clamp(30px, 7cqw, 46px);
   }
   .sg-lede {
-    font-size: 15px;
+    font-size: 14.5px;
   }
-  .sg-steps {
-    gap: 3px;
+  .sg-steps li {
+    padding: 5px 0;
   }
   .sg-issue {
-    min-height: 42px;
-    padding-block: 2px;
+    padding: 4px 0;
   }
-  .sg-tips {
-    margin-top: 8px;
-    font-size: 14px;
-    gap: 3px;
+  .sg-issue-plain {
+    font-size: 12px;
   }
-  .sg-calib-message {
-    font-size: 14px;
+  .sg-tip-how {
+    -webkit-line-clamp: 2;
+  }
+  .sg-session {
+    padding-block: 6px;
+  }
+  .sg-stats dd {
+    font-size: 17px;
+  }
+  .sg-spark {
+    height: 30px;
+  }
+  .sg-h2 {
+    font-size: 19px;
   }
 }
 
-/* The welcome card is narrow: stack "How it works" above the privacy note */
-@container (max-width: 520px) {
-  .sg-welcome-body {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 12px;
-  }
-}
-
-/* Very small windows: one column that scrolls */
-@container sg-app (max-width: 720px) {
+/* Narrow or short windows: stack everything and let the page scroll */
+@container sg-app (max-width: 740px) {
   .sg-main {
     overflow: auto;
-    padding-bottom: 12px;
   }
   .sg-grid,
   .sg-app[data-screen] .sg-grid {
@@ -949,42 +1889,91 @@ body.sg-host {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: none;
   }
-  .sg-app[data-screen="welcome"] .sg-grid {
-    grid-template-areas: "welcome" "maizy";
+  .sg-app[data-screen='welcome'] .sg-grid {
+    grid-template-areas: 'welcome' 'maizy';
   }
-  .sg-app[data-screen="dashboard"] .sg-grid {
-    grid-template-areas: "side" "cam" "maizy" "issues" "tip";
+  .sg-app[data-screen='dashboard'] .sg-grid {
+    grid-template-areas: 'side' 'cam' 'maizy' 'issues' 'tip' 'session';
   }
-  .sg-app[data-screen="calibrate"] .sg-grid,
-  .sg-app[data-screen="stretch"] .sg-grid {
-    grid-template-areas: "side" "panel" "cam" "maizy";
+  .sg-app[data-screen='calibrate'] .sg-grid,
+  .sg-app[data-screen='stretch'] .sg-grid {
+    grid-template-areas: 'side' 'panel' 'cam' 'maizy';
   }
   .sg-camera {
     aspect-ratio: 4 / 3;
   }
   .sg-maizy-card,
   .sg-side {
-    height: 260px;
+    height: 300px;
   }
-  .sg-calib,
-  .sg-guide {
+  .sg-panel,
+  .sg-session {
     grid-template-columns: minmax(0, 1fr);
   }
-  .sg-issue {
-    grid-template-columns: minmax(0, 1fr) auto;
-    padding-block: 8px;
+  .sg-calib-action,
+  .sg-guide-action {
+    padding-left: 0;
+    border-left: 0;
   }
-  .sg-issue .sg-bar {
-    grid-column: 1 / -1;
-    grid-row: 2;
+  .sg-footer {
+    flex-wrap: wrap;
+    padding-top: 6px;
   }
 }
+
+/* ── Swaps that would otherwise teleport ───────────────────────────────
+   When one of these appears (a mode change: you left the frame, paused, the
+   score came back), it fades in instead of popping. Opacity only, 200ms. */
+
+.sg-chip,
+.sg-empty,
+.sg-issue-list,
+.sg-score-digits,
+.sg-score-none,
+.sg-camera-off,
+.sg-setting-error {
+  transition: opacity 200ms ease;
+}
+@starting-style {
+  .sg-chip,
+  .sg-empty,
+  .sg-issue-list,
+  .sg-score-digits,
+  .sg-score-none,
+  .sg-camera-off,
+  .sg-setting-error {
+    opacity: 0;
+  }
+}
+
+/* ── Reduced motion: keep the fades, drop the movement ────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
   .sg-app *,
   .sg-app *::before,
   .sg-app *::after {
-    transition: none !important;
-    animation: none !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+  }
+  .sg-digit-strip,
+  .sg-hl,
+  .sg-bar-fill,
+  .sg-figure [data-bend],
+  .sg-settings,
+  .sg-settings[data-open='true'],
+  .sg-step-dots li,
+  .sg-switch::after,
+  .sg-btn {
+    transition-property: opacity, background-color, color, border-color;
+  }
+  .sg-score {
+    transition: none;
+  }
+  .sg-dial-wrap[data-phase='idle'] .sg-breath {
+    animation: none;
+    transform: scale(0.92);
+  }
+  .sg-dial-arc circle {
+    transition: none;
   }
 }
