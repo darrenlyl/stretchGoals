@@ -28,7 +28,7 @@ const agent = createMaizyAgent({
 });
 const wake = createWakeWord({
   Vosk,
-  onWake: () => agent.start('wake_word'),
+  onWake: () => agent.start('wake_word', { heardAt: Date.now() }),
   isBlocked: () => voice.isSpeaking(), // the coach saying "Hey, Maizy here" shouldn't wake her
 });
 
@@ -53,9 +53,28 @@ function syncListening() {
 agent.onChange(({ status }) => {
   voice.voiceCoach.setAgentActive(status !== 'idle'); // one voice at a time
   syncListening();
-  renderCallChip();
+  sendMaizyStatus();
 });
-wake.onState(renderCallChip);
+
+let wakeState = 'off';
+wake.onState((state) => {
+  wakeState = state;
+  if (state === 'listening') agent.warmUp(); // a signed URL ready for when they say her name
+  sendMaizyStatus();
+});
+
+// The menu bar shows a dot next to the score ("•" listening, "◉" on a call) and the tray menu
+// has Talk / End call / Listen for "Hey Maizy", so nothing sits on top of the window.
+function sendMaizyStatus() {
+  if (canCall) window.api.setMaizyStatus({ call: agent.status(), wake: wakeState, listenOn: heyMaizyOn });
+}
+
+function toggleListening() {
+  heyMaizyOn = !heyMaizyOn;
+  saveSetting('maizy.heyMaizy', heyMaizyOn);
+  syncListening();
+  sendMaizyStatus();
+}
 
 // The UI's voice switch also stops Maizy waking up by herself.
 const voiceForUi = {
@@ -105,6 +124,8 @@ window.api?.onTrayCommand((command) => {
   if (command === 'resume') ui.setPaused(false);
   if (command === 'recalibrate') ui.showScreen('calibrate');
   if (command === 'talk') agent.start('talk');
+  if (command === 'end-call') agent.end();
+  if (command === 'toggle-listen') toggleListening();
 });
 
 // Dev only, until Darren's posture module exists: the fake panel stands in for analyze().
@@ -114,58 +135,6 @@ if (import.meta.env.DEV && !posture) {
       if (!paused) handleState(state);
     });
   });
-}
-
-// ---------------------------------------------------------------------------
-// The call chip: shows whether the mic is listening or Maizy is on a call, with Talk / End / on-off
-// ---------------------------------------------------------------------------
-
-const chip = document.querySelector('#maizy-call');
-let wakeState = 'off';
-let wakeDetail = '';
-
-function renderCallChip(state, detail) {
-  if (typeof state === 'string') [wakeState, wakeDetail] = [state, detail ?? ''];
-  if (!canCall) return chip.replaceChildren();
-
-  const status = agent.status();
-  let text;
-  let buttons;
-  if (status === 'connecting') {
-    text = 'Calling Maizy…';
-    buttons = [button('End', () => agent.end())];
-  } else if (status === 'talking') {
-    text = 'Talking to Maizy';
-    buttons = [button('End', () => agent.end())];
-  } else {
-    text = {
-      listening: 'Say “Hey Maizy”',
-      loading: 'Getting “Hey Maizy” ready…',
-      error: `“Hey Maizy” isn't working: ${wakeDetail}`,
-      off: paused ? 'Paused' : '“Hey Maizy” is off',
-    }[wakeState];
-    buttons = [
-      button('Talk', () => agent.start('talk')),
-      button(heyMaizyOn ? 'Stop listening' : 'Listen', () => {
-        heyMaizyOn = !heyMaizyOn;
-        saveSetting('maizy.heyMaizy', heyMaizyOn);
-        syncListening();
-        renderCallChip();
-      }),
-    ];
-  }
-  chip.dataset.state = status === 'idle' ? wakeState : status;
-  const label = document.createElement('span');
-  label.textContent = text;
-  chip.replaceChildren(label, ...buttons);
-}
-
-function button(text, onClick) {
-  const b = document.createElement('button');
-  b.type = 'button';
-  b.textContent = text;
-  b.onclick = onClick;
-  return b;
 }
 
 // localStorage can be missing or throw (private mode); the default still works then.
@@ -185,7 +154,7 @@ function saveSetting(key, value) {
   }
 }
 
-renderCallChip();
+sendMaizyStatus();
 syncListening();
 
 // TEMPORARY: just shows the webcam so the Start button works. Replaced by Jordan's camera/index.js.

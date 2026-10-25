@@ -63,6 +63,10 @@ const agent = {
     turn: { turn_timeout: TURN_TIMEOUT_SECONDS, silence_end_call_timeout: SILENCE_END_CALL_SECONDS },
     conversation: { max_duration_seconds: MAX_DURATION_SECONDS },
   },
+  // Let the app send her first line per call (her instant greeting after "Hey Maizy").
+  platform_settings: {
+    overrides: { conversation_config_override: { agent: { first_message: true } } },
+  },
 };
 
 const agentId = process.env.ELEVENLABS_AGENT_ID;

@@ -7,7 +7,8 @@
 //
 //   const agent = createMaizyAgent({ Conversation, getSignedUrl, onLog });
 //   agent.update(state)       every PostureState (~10 times a second)
-//   agent.start(reason)       "wake_word" | "talk"
+//   agent.start(reason, { heardAt })  "wake_word" | "talk"; heardAt = when "Hey Maizy" was heard, for timing
+//   agent.warmUp()            keep a signed URL ready so calls start faster (free)
 //   agent.end()
 //   agent.setAutoWake(bool)   false = never wake by herself (voice off, paused)
 //   agent.onChange(cb)        cb({ status, reason }), status: "idle" | "connecting" | "talking"
@@ -37,6 +38,9 @@ export const CALL_RULES = {
 };
 
 const AUTO_REASONS = new Set(["stuck_issue", "long_sitting"]);
+
+// What she says first when they called her ("Hey Maizy" or Talk). Spoken straight away.
+const GREETINGS = ["Hey! What's up?", "Hi! What can I do for you?", "Hey there, I'm listening.", "Hi! How can I help?"];
 
 // The daily cap survives restarts when localStorage works, and lives in memory when it doesn't.
 const WAKES_KEY = "maizy.autoWakes";
@@ -96,19 +100,47 @@ export function createMaizyAgent({ Conversation, getSignedUrl, onLog = () => {} 
   // Starting and ending calls
   // ---------------------------------------------------------------------------
 
+  // Signed URLs last about 15 minutes. Keeping a spare one saves a round trip when they say "Hey Maizy".
+  const SPARE_URL_MAX_AGE_MS = 10 * 60_000;
+  let spareUrl = null; // { url, at }
+  let warmTimer = null;
+
+  /** Keep a signed URL ready (refreshed every 10 min) so a call starts faster. Free: no call is opened. */
+  function warmUp() {
+    warmTimer ??= setInterval(warmUp, SPARE_URL_MAX_AGE_MS);
+    if (spareUrl && Date.now() - spareUrl.at < SPARE_URL_MAX_AGE_MS) return;
+    getSignedUrl().then(
+      (url) => (spareUrl = { url, at: Date.now() }),
+      () => {}, // no spare this time; start() fetches one itself
+    );
+  }
+
+  async function takeSignedUrl() {
+    const spare = spareUrl;
+    spareUrl = null;
+    if (warmTimer) setTimeout(warmUp, 0); // a fresh spare for the next call
+    return spare && Date.now() - spare.at < SPARE_URL_MAX_AGE_MS ? spare.url : getSignedUrl();
+  }
+
   async function start(why, detail = {}) {
     if (status !== "idle") return;
+    const askedAt = detail.heardAt ?? Date.now();
     reason = why;
     endRequested = false;
     if (AUTO_REASONS.has(why)) countAutoWake();
     setStatus("connecting"); // the wake-word listener lets go of the mic on this
 
+    // When they called her, she answers with a ready-made line: no waiting for the AI to write one.
+    const greeting = AUTO_REASONS.has(why) ? null : GREETINGS[Math.floor(Math.random() * GREETINGS.length)];
+    let answered = false;
+
     try {
-      const signedUrl = await getSignedUrl();
+      const signedUrl = await takeSignedUrl();
       conversation = await Conversation.startSession({
         signedUrl,
         connectionType: "websocket",
         clientTools,
+        ...(greeting && { overrides: { agent: { firstMessage: greeting } } }),
         onDisconnect: () => {
           conversation = null;
           clearInterval(quietTimer);
@@ -118,6 +150,10 @@ export function createMaizyAgent({ Conversation, getSignedUrl, onLog = () => {} 
         onModeChange: ({ mode: m }) => {
           mode = m;
           lastActivityAt = Date.now();
+          if (m === "speaking" && !answered) {
+            answered = true;
+            onLog("app", `She answered ${((Date.now() - askedAt) / 1000).toFixed(1)} s after the ${why === "wake_word" ? "wake word" : "start"}`);
+          }
         },
         onMessage: ({ message, role, source }) => {
           lastActivityAt = Date.now();
@@ -139,7 +175,7 @@ export function createMaizyAgent({ Conversation, getSignedUrl, onLog = () => {} 
     goodbyeAt = 0;
     toldIssue = null;
     setStatus("talking");
-    tell(openingLine(why, detail));
+    if (!greeting) tell(openingLine(why, detail));
     if (detail.issue) {
       lastToldAt[detail.issue.id] = Date.now();
       toldIssue = detail.issue.id;
@@ -152,9 +188,8 @@ export function createMaizyAgent({ Conversation, getSignedUrl, onLog = () => {} 
     conversation?.endSession();
   }
 
-  // Why she was called, as her first "[app]" message. Her prompt says how to greet for each.
+  // Why the app woke her, as her first "[app]" message. Her prompt says how to open.
   function openingLine(why, d) {
-    if (why === "wake_word") return `[app] They just said "Hey Maizy".`;
     if (why === "stuck_issue") {
       const minutes = Math.max(1, Math.round(d.issue.durationSec / 60));
       return (
@@ -162,8 +197,7 @@ export function createMaizyAgent({ Conversation, getSignedUrl, onLog = () => {} 
         `and the quick reminder didn't fix it. Score is ${d.score}.`
       );
     }
-    if (why === "long_sitting") return `[app] The app woke you: they've been sitting for about ${d.minutes} minutes without a break.`;
-    return "[app] They pressed Talk to Maizy.";
+    return `[app] The app woke you: they've been sitting for about ${d.minutes} minutes without a break.`;
   }
 
   // sendUserMessage makes her take a turn. Her prompt says "[app]" messages come from the app.
@@ -309,6 +343,7 @@ export function createMaizyAgent({ Conversation, getSignedUrl, onLog = () => {} 
   return {
     update,
     start,
+    warmUp,
     end,
     setAutoWake: (on) => (autoWake = Boolean(on)),
     onChange: (cb) => (listeners.add(cb), () => listeners.delete(cb)),

@@ -172,7 +172,23 @@ ipcMain.on('set-tray-score', (_event, score) => {
   if (tray) updateTrayScore();
 });
 
-// Sends 'pause' | 'resume' | 'recalibrate' | 'show' | 'talk' to the window.
+// setMaizyStatus({ call, wake, listenOn }): the dot next to the tray score and the Maizy menu items.
+//   call: 'idle' | 'connecting' | 'talking'   wake: 'off' | 'loading' | 'listening' | 'error'
+ipcMain.on('set-maizy-status', (_event, status) => {
+  const next = {
+    call: String(status?.call ?? 'idle'),
+    wake: String(status?.wake ?? 'off'),
+    listenOn: Boolean(status?.listenOn),
+  };
+  if (JSON.stringify(next) === JSON.stringify(maizyStatus)) return;
+  maizyStatus = next;
+  if (tray) {
+    updateTrayScore();
+    updateTrayMenu();
+  }
+});
+
+// Sends 'pause' | 'resume' | 'recalibrate' | 'show' | 'talk' | 'end-call' | 'toggle-listen' to the window.
 function sendTrayCommand(command) {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('tray-command', command);
@@ -184,6 +200,24 @@ function sendTrayCommand(command) {
 let tray = null; // kept at the top level so it isn't garbage-collected and vanish
 let trayScore = null;
 let paused = false;
+let maizyStatus = { call: 'idle', wake: 'off', listenOn: false };
+
+// What Maizy is doing, in words (menu) and as a dot before the score (Mac menu bar).
+function maizyLine() {
+  if (maizyStatus.call === 'connecting') return 'Calling Maizy…';
+  if (maizyStatus.call === 'talking') return 'Talking to Maizy';
+  return {
+    listening: 'Listening for “Hey Maizy”',
+    loading: 'Getting “Hey Maizy” ready…',
+    error: '“Hey Maizy” isn’t working',
+    off: '“Hey Maizy” is off',
+  }[maizyStatus.wake];
+}
+function maizyDot() {
+  if (maizyStatus.call !== 'idle') return '◉ '; // on a call
+  if (maizyStatus.wake === 'listening') return '• '; // listening for her name
+  return '';
+}
 
 function createTray() {
   const icon = nativeImage.createEmpty();
@@ -203,16 +237,27 @@ function updateTrayScore() {
   const text = trayScore === null ? '–' : String(trayScore);
   // Mac shows text next to the icon. Windows ignores setTitle, so it gets the tooltip.
   if (process.platform === 'darwin') {
-    tray.setTitle(` ${text}`, { fontType: 'monospacedDigit' });
+    tray.setTitle(` ${maizyDot()}${text}`, { fontType: 'monospacedDigit' });
   }
-  tray.setToolTip(`Posture: ${text}`);
+  tray.setToolTip(`Posture: ${text} · ${maizyLine()}`);
 }
 
-// Rebuilt when paused changes, so the item says Pause or Resume.
+// Rebuilt when paused or Maizy's status changes, so the items match.
 function updateTrayMenu() {
+  const onCall = maizyStatus.call !== 'idle';
   const menu = Menu.buildFromTemplate([
+    { label: maizyLine(), enabled: false },
+    onCall
+      ? { label: 'End call', click: () => sendTrayCommand('end-call') }
+      : { label: 'Talk to Maizy', click: () => sendTrayCommand('talk') },
+    {
+      label: 'Listen for “Hey Maizy”',
+      type: 'checkbox',
+      checked: maizyStatus.listenOn,
+      click: () => sendTrayCommand('toggle-listen'),
+    },
+    { type: 'separator' },
     { label: 'Show window', click: showWindow },
-    { label: 'Talk to Maizy', click: () => sendTrayCommand('talk') },
     { label: paused ? 'Resume' : 'Pause', click: togglePause },
     {
       label: 'Recalibrate',
