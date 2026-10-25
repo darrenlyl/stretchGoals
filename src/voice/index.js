@@ -80,6 +80,13 @@ export function notify(title, body) {
   return say(body || title);
 }
 
+// The same test as src/notifications.js: the window is hidden, minimised or behind other apps.
+// Outside a window (Node tests) it's never "away".
+function lookingAway() {
+  if (typeof document === "undefined") return false;
+  return document.visibilityState === "hidden" || !document.hasFocus();
+}
+
 /** True while a line is playing or waiting to play. */
 export const isSpeaking = () => queued > 0;
 
@@ -127,7 +134,11 @@ export const RULES = {
     }
   
     if (now - lastLineAt < RULES.anyLineMs) return;
-  
+
+    // Not looking at the app: Shawn's notifier sends a notification and voice.notify reads it
+    // aloud, so the coach's own nudges would say the same thing twice.
+    if (lookingAway()) return;
+
     // 2. Same issue still going a minute after the nudge: offer a stretch, once
     if (warned && issue?.id === warned.id && !warned.offered && now - warned.at >= RULES.offerAfterMs) {
       warned.offered = true;

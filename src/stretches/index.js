@@ -8,7 +8,7 @@
 //   onStretchEvent(cb)  listen to events: { type: "start" | "step" | "tick" | "end", stretchId, stepIndex, secondsLeft }
 //
 // This module has no voice and no screen. It only keeps time and sends events.
-// The UI, Maizy and the voice coach listen to the events and each do their own part.
+// The UI and the voice coach listen to the events and each do their own part.
 // Shape matches TEAM_GUIDE.md 3.4 and Darren's src/ui/fallback-stretches.js, so the UI works with it as-is.
 //
 // Keep stretches gentle, seated, and 30–60 seconds long (TEAM_GUIDE Track 3).

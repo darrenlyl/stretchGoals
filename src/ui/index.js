@@ -778,7 +778,7 @@ function renderStretch() {
   const { stretch, stepIndex, secondsLeft, stepTotal } = stretchRun;
   const steps = Array.isArray(stretch.steps) ? stretch.steps : [];
   setText(refs.stretchName, stretchName(stretch));
-  setText(refs.stretchStep, stepText(steps[stepIndex]) || "Follow along with Maizy.");
+  setText(refs.stretchStep, stepText(steps[stepIndex]) || "Follow the steps with the voice.");
   const next = stepText(steps[stepIndex + 1]);
   setText(refs.stretchNext, steps.length ? (next ? `Up next: ${next}` : "Last step. Nearly done.") : "");
   setText(refs.stretchStepOf, steps.length ? `Step ${stepIndex + 1} of ${steps.length}` : "");

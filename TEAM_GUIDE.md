@@ -9,7 +9,7 @@ This is the single source of truth for the hackathon. Read it once at kickoff. T
 | 1. Camera & Pose | **Jordan** | the eyes | `src/camera/`, `data/recordings/` |
 | 2. Posture Brain | **Darren** | the doctor | `src/posture/`, `src/shared/` |
 | 3. Voice Coach & Stretches | **Joseph** | the coach | `src/voice/`, `src/stretches/` |
-| 4. Desktop App & Maizy | **Shawn** | the body | `src/main.js`, `src/preload.js`, `src/app.js`, `src/maizy/`, `src/debug/`, `forge.config.mjs` |
+| 4. Desktop App & Maizy | **Shawn** | the body | `src/main.js`, `src/preload.js`, `src/app.js`, `src/notifications.js`, `src/maizy/`, `src/debug/`, `forge.config.mjs` |
 | UI screens | **Claude** (run from Darren's session) | the face | `src/ui/` |
 
 **Contents**
@@ -310,6 +310,7 @@ stretchGoals/
     ├── main.js              ← Shawn: Electron main process (window, tray, notifications, ElevenLabs calls)
     ├── preload.js           ← Shawn: exposes window.api
     ├── app.js               ← Shawn: wires the modules together
+    ├── notifications.js     ← Shawn: desktop notifications for sustained issues
     ├── shared/contracts.js  ← Darren
     ├── camera/              ← Jordan   (index.js, dev.html)
     ├── posture/             ← Darren   (index.js, dev.html, replay.mjs)
@@ -696,10 +697,10 @@ Add a line to the UI and the voice intro: *"Move gently and stop if anything hur
 | 3 | IPC bridge (`window.api`) | ✅ Done |
 | 4 | Tray score and menu | ✅ Done |
 | 5 | Maizy | ✅ Done |
-| 6 | Wire `app.js` | ⏳ Waiting on `src/camera/index.js` (Jordan) and `src/posture/index.js` (Darren) |
-| 7 | Notifications | 🔜 Next |
+| 6 | Wire `app.js` | ✅ Done |
+| 7 | Notifications | ✅ Done |
 | 8 | Background running | ✅ Done |
-| 9 | Packaging | 🔜 First test build soon, final build after checkpoint 2 |
+| 9 | Packaging | ✅ Done on Mac (rebuild after merging teammates' updates); Windows needs a Windows laptop |
 
 Maizy doesn't do stretches; the voice and the UI's stretch screen guide them.
 
@@ -710,26 +711,20 @@ Maizy doesn't do stretches; the voice and the UI's stretch screen guide them.
 **Milestones**
 0. ✅ **Scaffold.** Electron Forge with the Vite template. Each track has its folder; `.env` is git-ignored and `.env.example` lists `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID` and `ELEVENLABS_AGENT_ID`. The Forge config is `forge.config.mjs`.
 1. ✅ **Fake posture panel** (`src/debug/fake-posture.js`). A score slider, and for each issue an "active" checkbox, a severity slider and a "sustained" toggle. It sends a `PostureState` on every change and 10 times a second. Use it with `mountFakePosturePanel(el, (state) => yourModule.update(state))`.
-2. ✅ **Camera in Electron.** `main.js` asks macOS for camera permission before the window opens. `app.js` shows a temporary mirrored `getUserMedia` feed with a friendly message if the camera is blocked or busy; Jordan's `startCamera()` replaces it at checkpoint 1. Windows has no prompt; the message points to Settings → Privacy & security → Camera.
+2. ✅ **Camera in Electron.** `main.js` asks macOS for camera permission before the window opens. The UI's Start camera button calls Jordan's `startCamera()` and shows a friendly message if the camera is blocked or busy. Windows has no prompt; the message points to Settings → Privacy & security → Camera.
 3. ✅ **IPC bridge.** `preload.js` exposes exactly four functions on `window.api` (contract 3.5). `tts` calls ElevenLabs from the main process with the key from `.env` (same model and voice settings as Joseph's scripts, 500 characters max); `notify` shows a desktop notification; `setTrayScore` updates the tray; `onTrayCommand` tells the window when a tray item is clicked.
 4. ✅ **Tray.** A person icon in the menu bar with the score next to it (`tray.setTitle` on Mac; on Windows `setTitle` does nothing, so the score is in the tooltip and left-click opens the window). The menu has Show window, Pause/Resume, Recalibrate and Quit; clicks reach the window through `onTrayCommand` (`pause`, `resume`, `recalibrate`, `show`).
-5. ✅ **Maizy.** A 10-frame flipbook the team drew (`src/maizy/maizy-strip.webp`), from fully slumped to standing tall. `maizy.update(state)` picks a frame from the posture score (one frame per 10 points), walks to it one frame at a time, and adds breathing, sway, sparkles from 95, an amber glow on sustained issues and an away state. She cheers when you fix an issue. She mounts into `<div id="maizy">`; her background is transparent, so she works in light and dark mode.
-6. ⏳ **Wire `app.js`** as shown in Section 2: camera → posture → UI, Maizy, voice and tray. Swap out the temporary camera feed and the fake panel. Needs Jordan's and Darren's modules; merge at checkpoint 1. Darren's UI must create `<div id="maizy">` for Maizy to appear.
-7. 🔜 **Notifications.** When an issue becomes sustained, `voice.notify(title, body)` shows a desktop notification and the coach reads it aloud (use it for every notification, not `window.api.notify` directly), only while the window is hidden (the voice speaks while it's open), with a cooldown so it doesn't nag. `app.setAppUserModelId` is already set for Windows.
+5. ✅ **Maizy.** A 10-frame flipbook the team drew (`src/maizy/maizy-strip.webp`), from fully slumped to standing tall. `maizy.update(state)` picks a frame from the posture score (one frame per 10 points), walks to it one frame at a time, and adds breathing, sway, sparkles from 95, a red glow on sustained issues and an away state. She cheers when you fix an issue. She mounts into `<div id="maizy">`; her background is transparent, so she works in light and dark mode.
+6. ✅ **Wire `app.js`.** The UI mounts into `#app` (its Start button starts the camera), Maizy into the UI's `#maizy` slot. Every PoseFrame goes through `posture.analyze()`, then to the UI, Maizy, the voice coach, notifications and the tray. Pause (UI or tray) stops it all; tray Recalibrate opens calibration. `app.js` sorts issues worst first before passing them on. In dev, tick "Use fake posture" under the app to drive everything from the fake panel instead of the camera.
+7. ✅ **Notifications** (`src/notifications.js`). `postureNotifier.update(state)` shows a desktop notification for a sustained issue only when you're not looking at the app (window hidden, minimised or behind other apps); while you're looking, Maizy and the voice handle it. Same cooldowns as Joseph's voice coach: 3 minutes per issue, 60 seconds between any two. The title is the medical name, the body the plain name plus a quick fix. Tray Pause stops them, and clicking a notification opens the app. `app.setAppUserModelId` is set for Windows. It sends them through `voice.notify`, so the coach reads each one aloud, and the coach skips its own nudge while you are away so nothing is said twice.
 8. ✅ **Background running.** Closing the window hides it instead of quitting, so posture tracking continues from the tray. Tray → Quit or Cmd+Q really quits. `backgroundThrottling: false` keeps timers at full speed while the window is hidden, and on Mac the dock icon brings the window back.
-9. 🔜 **Packaging** with `npm run make`. It builds for the OS you run it on: a `.app` on a Mac, an installer `.exe` on Windows. To ship both, run it once on each.
+9. ✅ **Packaging** with `npm run make`. It builds for the OS you run it on: a `.app` on a Mac, an installer `.exe` on Windows. To ship both, run it once on each.
 
-    **Mac:** add the camera permission text in `forge.config.mjs`, or the packaged app's camera will just show black:
-    ```js
-    packagerConfig: {
-      extendInfo: {
-        NSCameraUsageDescription: "stretchGoals uses your camera to check your posture. Video never leaves your computer.",
-      },
-    },
-    ```
-    The app isn't code-signed, so the first launch needs right-click → Open.
+    **Mac (done):** `npm run make` creates `out/stretchGoals-darwin-arm64/stretchGoals.app` and a zip to share in `out/make/zip/darwin/arm64/`. `forge.config.mjs` sets the app's own ID (`com.stretchgoals.app`), the camera permission text (`NSCameraUsageDescription`, without it the camera shows black), and re-signs the finished app (ad-hoc, no Apple certificate) so macOS allows its notifications. Jordan's MediaPipe files (`public/mediapipe/`) are packed in, so it works with Wi-Fi off. DevTools and the fake posture panel only appear with `npm start`.
+    - The app isn't signed with an Apple certificate, so the first launch needs right-click → Open.
+    - **Voice:** the packaged app reads its ElevenLabs key from `~/Library/Application Support/stretchGoals/.env` (copy your project's `.env` there). The key is never packed into the app.
 
-    **Windows:** the Forge template's default Windows maker (Squirrel) produces a `Setup.exe`. It isn't signed, so Windows SmartScreen will warn: click "More info" → "Run anyway".
+    **Windows:** the Forge template's default Windows maker (Squirrel) produces a `Setup.exe`. It isn't signed, so Windows SmartScreen will warn: click "More info" → "Run anyway". The voice key goes in `%APPDATA%\stretchGoals\.env`.
 
     *Done when:* the packaged app for the demo laptop launches normally, gets the camera, and works with Wi-Fi off.
 

@@ -1,13 +1,23 @@
-/* Page-level styles only. The UI brings its own (src/ui/ui.css). */
+/* Page basics. Darren's UI (src/ui/ui.css) styles everything inside #app. */
+html,
 body {
   margin: 0;
+}
+body {
   font-family:
     -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial,
     sans-serif;
 }
 
-/* Dev only: keeps the fake posture panel out of the way of the UI. */
-#debug-panel:not(:empty) {
-  padding: 1rem;
-  border-top: 1px dashed #ccc;
+/* Dev only: the fake posture panel under the app */
+#debug-panel {
+  padding: 16px;
+}
+#debug-panel:empty {
+  display: none;
+}
+#debug-panel .fake-toggle {
+  display: block;
+  margin-bottom: 8px;
+  font: 600 14px system-ui, sans-serif;
 }
