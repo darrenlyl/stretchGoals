@@ -5,17 +5,36 @@ import { MakerRpm } from '@electron-forge/maker-rpm';
 import { VitePlugin } from '@electron-forge/plugin-vite';
 import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
+import { execFileSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
 
 const config = {
   packagerConfig: {
     asar: true,
-    // Mac shows these when asking for permission. Without them a packaged app gets no camera or mic.
+    // Mac: the packaged app's own name for permissions (camera, microphone, notifications)
+    appBundleId: 'com.stretchgoals.app',
     extendInfo: {
-      NSCameraUsageDescription: 'stretchGoals watches your posture through your camera. Video stays on this computer.',
-      NSMicrophoneUsageDescription: 'stretchGoals listens for "Hey Maizy" on this computer, and for your voice when you talk to Maizy.',
+      // Mac shows these when asking. Without them, the packaged app can't use the camera or mic.
+      NSCameraUsageDescription:
+        'stretchGoals uses your camera to check your posture. Video never leaves your computer.',
+      NSMicrophoneUsageDescription:
+        'stretchGoals listens for "Hey Maizy" on this computer, and for your voice when you talk to Maizy.',
     },
   },
   rebuildConfig: {},
+  hooks: {
+    // Mac: re-sign the finished app (ad-hoc, no Apple certificate needed) so its signature
+    // matches appBundleId. Without this, macOS refuses the app's notifications.
+    postPackage: async (_forgeConfig, { platform, outputPaths }) => {
+      if (platform !== 'darwin') return;
+      for (const dir of outputPaths) {
+        for (const name of fs.readdirSync(dir).filter((file) => file.endsWith('.app'))) {
+          execFileSync('codesign', ['--force', '--deep', '--sign', '-', path.join(dir, name)]);
+        }
+      }
+    },
+  },
   makers: [
     new MakerSquirrel({}),
     new MakerZIP({}, ['darwin']),

@@ -37,3 +37,51 @@ import { computeSeverities } from "./severity.js";
 const base = calibrate(upright).baseline;
 console.log("sev upright:", computeSeverities(computeMetrics(makeFakeFrame()), base));
 console.log("sev head down:", computeSeverities(computeMetrics(makeFakeFrame({ neckDrop: 0.2 })), base));
+
+import { analyze, startCalibration } from "./index.js";
+console.log("before calibrating:", analyze(makeFakeFrame()).score);
+const done = startCalibration(3000);
+for (let t = 0; t <= 3000; t += 100) {
+  const frame = makeFakeFrame();
+  frame.timestamp = t;
+  const s = analyze(frame);
+  if (t % 1000 === 0) console.log("t =", t, "calibrating:", s.calibrating, "progress:", s.calibrationProgress);
+}
+console.log("result ok:", (await done).ok);
+console.log("upright:", analyze(makeFakeFrame()).score);
+console.log("head down:", analyze(makeFakeFrame({ neckDrop: 0.2 })).score);
+
+import { setSensitivity, resetCalibration } from "./index.js";
+const small = makeFakeFrame({ neckDrop: 0.1 });
+// Check the severity itself: with hysteresis, an issue that's already ON stays listed for 2 s
+setSensitivity(0);   console.log("relaxed:", analyze(small).metrics.severity.forward_head.toFixed(2));
+setSensitivity(0.5); console.log("normal:",  analyze(small).metrics.severity.forward_head.toFixed(2));
+setSensitivity(1);   console.log("strict:",  analyze(small).metrics.severity.forward_head.toFixed(2));
+setSensitivity(0.5); // back to normal for the tests below
+
+resetCalibration();
+console.log("after reset, calibrated:", analyze(makeFakeFrame()).calibrated);
+
+// --- Hysteresis: someone wobbling right at the edge of forward head posture ---
+const done3 = startCalibration(3000);
+for (let t = 30000; t <= 33000; t += 100) analyze({ ...makeFakeFrame(), timestamp: t });
+await done3;
+for (let t = 33100; t <= 40000; t += 100) {
+  const wobble = (t / 100) % 2 === 0 ? 0.124 : 0.116;   // severity ≈ 0.32, 0.28, 0.32, …
+  const s = analyze({ ...makeFakeFrame({ neckDrop: wobble }), timestamp: t });
+  if (t % 1000 === 100) console.log("wobble t =", t / 1000, " issues:", s.issues.length, " sustained:", s.issues[0]?.sustained);
+}
+for (let t = 40100; t <= 43000; t += 100) {
+  const s = analyze({ ...makeFakeFrame(), timestamp: t });
+  if (t % 500 === 100) console.log("sat up t =", t / 1000, " issues:", s.issues.length);
+}
+
+
+// --- Smoothing: the score should glide down, not jump ---
+const done4 = startCalibration(3000);
+for (let t = 50000; t <= 53000; t += 100) analyze({ ...makeFakeFrame(), timestamp: t });
+await done4;
+for (let t = 53100; t <= 56000; t += 100) {
+  const s = analyze({ ...makeFakeFrame({ neckDrop: 0.2 }), timestamp: t });
+  if (t % 300 === 0 || t === 53100) console.log("smooth t =", t / 1000, " score:", s.score);
+}

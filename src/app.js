@@ -1,23 +1,25 @@
-// Window entry point. Connects all the modules (TEAM_GUIDE.md Section 2).
+// Window entry point. Connects all the modules (TEAM_GUIDE.md Section 2):
+// camera -> posture -> UI, Maizy, voice coach, Maizy the voice agent, notifications and the tray.
 import './index.css';
 import { Conversation } from '@elevenlabs/client';
 import * as Vosk from 'vosk-browser';
-import { ui } from './ui/index.js';
-import { maizy } from './maizy/index.js';
+import * as camera from './camera/index.js';
+import * as posture from './posture/index.js';
 import * as voice from './voice/index.js';
 import * as stretches from './stretches/index.js';
+import { ui } from './ui/index.js';
+import { maizy } from './maizy/index.js';
+import { postureNotifier } from './notifications.js';
 import { createMaizyAgent } from './voice/agent/maizy-agent.js';
 import { createWakeWord } from './voice/wake-word.js';
 
-// Jordan's camera and Darren's posture modules plug in here as soon as their files exist.
-// import.meta.glob returns {} for a missing file instead of failing the build.
-const camera = Object.values(import.meta.glob('./camera/index.js', { eager: true }))[0] ?? standInCamera();
-const posture = Object.values(import.meta.glob('./posture/index.js', { eager: true }))[0];
-
-console.log('stretchGoals renderer loaded', { realCamera: !camera.standIn, realPosture: !!posture });
+let paused = false;
+let useFake = false; // dev only: the fake posture panel drives the app instead of the camera
+let voiceOn = true;
+let heyMaizyOn = readSetting('maizy.heyMaizy', true);
 
 // ---------------------------------------------------------------------------
-// Maizy, the live voice agent: woken by "Hey Maizy", the Talk button, or the app (WAKE_RULES)
+// Maizy, the live voice agent: woken by "Hey Maizy", the tray's Talk, or the app (WAKE_RULES)
 // ---------------------------------------------------------------------------
 
 const canCall = Boolean(window.api?.maizySignedUrl); // only inside Electron, where the API key lives
@@ -32,14 +34,10 @@ const wake = createWakeWord({
   isBlocked: () => voice.isSpeaking(), // the coach saying "Hey, Maizy here" shouldn't wake her
 });
 
-let paused = false;
-let voiceOn = true;
-let heyMaizyOn = readSetting('maizy.heyMaizy', true);
-
-// The app may only wake her by itself on REAL posture data. The fake panel says "sitting,
-// calibrated" nonstop, so it would start a paid call every 50 minutes in dev.
+// The app may only wake her by itself on REAL posture data. The fake panel can say "sitting,
+// calibrated" nonstop, which would start a paid call every 50 minutes in dev.
 function updateAutoWake() {
-  agent.setAutoWake(Boolean(posture) && voiceOn && !paused);
+  agent.setAutoWake(!useFake && voiceOn && !paused);
 }
 updateAutoWake();
 
@@ -90,35 +88,37 @@ const voiceForUi = {
 };
 
 // ---------------------------------------------------------------------------
-// UI, Maizy mascot, posture
+// UI, Maizy mascot, the posture pipeline
 // ---------------------------------------------------------------------------
 
+// The UI builds every screen, including the camera and Maizy's slot. Its Start button calls camera.startCamera().
 ui.mount(document.querySelector('#app'), { camera, posture, voice: voiceForUi, stretches });
-maizy.mount(document.querySelector('#maizy')); // the UI made this slot
+maizy.mount(document.querySelector('#maizy'));
 
-// Every PostureState, real or fake, goes everywhere through here.
+// Every PostureState goes to everyone who reacts to posture.
 function handleState(state) {
   ui.update(state);
   maizy.update(state);
   voice.voiceCoach.update(state);
+  postureNotifier.update(state);
   agent.update(state);
   window.api?.setTrayScore(state.score);
 }
 
-// Pause stops posture checks, the "Hey Maizy" mic, and any call.
-ui.onPauseChange((p) => {
-  paused = p;
+// Real pipeline: ~10 PoseFrames a second from the camera, judged by the posture brain.
+camera.onPoseFrame((frame) => {
+  if (paused || useFake) return;
+  handleState(worstFirst(posture.analyze(frame)));
+});
+
+// Pause: from the UI's button or the tray. Stops judging frames, alerts, the "Hey Maizy" mic and any call.
+ui.onPauseChange((value) => {
+  paused = value;
+  postureNotifier.setPaused(value);
   updateAutoWake();
   if (paused) agent.end();
   syncListening();
 });
-
-if (posture && camera.onPoseFrame) {
-  camera.onPoseFrame((frame) => {
-    if (!paused) handleState(posture.analyze(frame));
-  });
-}
-
 window.api?.onTrayCommand((command) => {
   if (command === 'pause') ui.setPaused(true);
   if (command === 'resume') ui.setPaused(false);
@@ -128,13 +128,32 @@ window.api?.onTrayCommand((command) => {
   if (command === 'toggle-listen') toggleListening();
 });
 
-// Dev only, until Darren's posture module exists: the fake panel stands in for analyze().
-if (import.meta.env.DEV && !posture) {
+// The contract promises issues worst first; the voice coach and notifications rely on it.
+function worstFirst(state) {
+  return { ...state, issues: [...state.issues].sort((a, b) => b.severity - a.severity) };
+}
+
+// Dev only: a fake posture panel under the app, for testing without a camera.
+// Tick "Use fake posture" and the panel drives the UI, Maizy, voice, notifications and tray.
+if (import.meta.env.DEV && window.api) {
   import('./debug/fake-posture.js').then(({ mountFakePosturePanel }) => {
-    mountFakePosturePanel(document.querySelector('#debug-panel'), (state) => {
-      if (!paused) handleState(state);
+    const debugPanel = document.querySelector('#debug-panel');
+    const toggle = document.createElement('label');
+    toggle.className = 'fake-toggle';
+    toggle.innerHTML = '<input type="checkbox" /> Use fake posture (dev only)';
+    const panelSpot = document.createElement('div');
+    debugPanel.append(toggle, panelSpot);
+
+    toggle.querySelector('input').onchange = (event) => {
+      useFake = event.target.checked;
+      updateAutoWake();
+      if (useFake) ui.showScreen('dashboard');
+    };
+    mountFakePosturePanel(panelSpot, (state) => {
+      if (useFake && !paused) handleState(state);
     });
   });
+  window.api.onTrayCommand((command) => console.log('Tray command:', command));
 }
 
 // localStorage can be missing or throw (private mode); the default still works then.
@@ -156,13 +175,3 @@ function saveSetting(key, value) {
 
 sendMaizyStatus();
 syncListening();
-
-// TEMPORARY: just shows the webcam so the Start button works. Replaced by Jordan's camera/index.js.
-function standInCamera() {
-  return {
-    standIn: true,
-    async startCamera(video) {
-      video.srcObject = await navigator.mediaDevices.getUserMedia({ video: true });
-    },
-  };
-}

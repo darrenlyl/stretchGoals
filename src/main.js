@@ -9,6 +9,7 @@ import {
   systemPreferences,
   Tray,
 } from 'electron';
+import fs from 'node:fs';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
 import { TRAY_ICON_16, TRAY_ICON_32 } from './tray-icon.js';
@@ -27,10 +28,14 @@ if (!app.requestSingleInstanceLock()) {
 }
 
 // Load secrets from .env. Only the main process can see them.
-try {
-  process.loadEnvFile();
-} catch {
-  console.warn('No .env file found. Voice (tts) will not work until you add one.');
+// npm start uses the project's .env. The packaged app uses one in its data folder
+// (Mac: ~/Library/Application Support/stretchGoals/.env).
+const envFiles = [path.join(process.cwd(), '.env'), path.join(app.getPath('userData'), '.env')];
+const envFile = envFiles.find((file) => fs.existsSync(file));
+if (envFile) {
+  process.loadEnvFile(envFile);
+} else {
+  console.warn(`No .env file found. Voice (tts) will not work until you add one at ${envFiles[1]}`);
 }
 
 // Windows needs an app ID for notifications to show.
@@ -44,8 +49,11 @@ let isQuitting = false;
 
 const createWindow = () => {
   mainWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
+    // Big enough for the UI's dashboard layout (camera, Maizy and score side by side)
+    width: 1200,
+    height: 820,
+    minWidth: 900,
+    minHeight: 640,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       // Keep timers running at full speed when the window is hidden, so posture checks continue.
@@ -61,7 +69,8 @@ const createWindow = () => {
     );
   }
 
-  mainWindow.webContents.openDevTools();
+  // DevTools only while developing, not in the packaged app
+  if (!app.isPackaged) mainWindow.webContents.openDevTools();
 
   // Closing the window hides it; the app keeps running in the tray.
   mainWindow.on('close', (event) => {
@@ -168,7 +177,10 @@ ipcMain.handle('tts', async (_event, text) => {
 // notify(title, body): desktop notification.
 ipcMain.on('notify', (_event, title, body) => {
   if (!Notification.isSupported()) return;
-  new Notification({ title: String(title), body: String(body ?? '') }).show();
+  const notification = new Notification({ title: String(title), body: String(body ?? '') });
+  // Clicking the notification opens the app
+  notification.on('click', showWindow);
+  notification.show();
 });
 
 // setTrayScore(score): update the number in the tray.
