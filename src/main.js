@@ -38,6 +38,11 @@ if (envFile) {
   console.warn(`No .env file found. Voice (tts) will not work until you add one at ${envFiles[1]}`);
 }
 
+// Debug mode: DevTools and the fake posture panel. Off unless you ask for it:
+//   STRETCHGOALS_DEBUG=1 npm start   (or put STRETCHGOALS_DEBUG=1 in .env)
+// Never on in the packaged app.
+const DEBUG = !app.isPackaged && process.env.STRETCHGOALS_DEBUG === '1';
+
 // Windows needs an app ID for notifications to show.
 if (process.platform === 'win32') {
   app.setAppUserModelId('com.stretchgoals.app');
@@ -61,16 +66,16 @@ const createWindow = () => {
     },
   });
 
+  // ?debug tells the window (src/app.js) to show the fake posture panel
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
-    mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
+    mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL + (DEBUG ? '?debug' : ''));
   } else {
     mainWindow.loadFile(
       path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`),
     );
   }
 
-  // DevTools only while developing, not in the packaged app
-  if (!app.isPackaged) mainWindow.webContents.openDevTools();
+  if (DEBUG) mainWindow.webContents.openDevTools();
 
   // Closing the window hides it; the app keeps running in the tray.
   mainWindow.on('close', (event) => {

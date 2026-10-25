@@ -264,7 +264,12 @@
           canvas.height = video.videoHeight || H;
           drawOverlay(canvas);
         },
-        stopCamera() {},
+        stopCamera() {
+          log("camera.stopCamera()");
+          const video = document.querySelector("#camera-video");
+          video?.srcObject?.getTracks().forEach((t) => t.stop());
+          if (video) video.srcObject = null;
+        },
         setOverlayVisible(v) {
           log(`camera.setOverlayVisible(${v})`);
         },

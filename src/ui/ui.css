@@ -1,7 +1,112 @@
-/* stretchGoals UI styles (owner: Claude via Darren).
-   Loaded by ui.mount() itself. Every class starts with "sg-" so it can't clash
-   with other modules' CSS. Colours and sizes are variables at the top: change
-   them there, not in the rules below. */
+/* stretchGoals UI styles (owner: Claude via Darren). Loaded by ui.mount() itself.
+   Every class starts with "sg-" so it can't clash with other modules' CSS.
+
+   Look: "Lightbox". Cool blue-grey neutrals, and colours with jobs:
+     vital (mint)       your body, health, progress, main buttons
+     trust (periwinkle) privacy, focus rings
+     warn (amber)       a problem building up
+     danger (coral)     a problem that has lasted, errors
+   Light and dark themes: ui.mount() always sets data-theme="light" | "dark" on .sg-app
+   (Settings → Appearance; "System" follows the computer). Change colours in the token
+   blocks below, never in the rules further down. */
+
+/* ── Tokens: light ──────────────────────────────────────────────────── */
+
+.sg-app {
+  color-scheme: light;
+  --sg-bg: oklch(0.975 0.004 250);
+  --sg-surface-1: oklch(0.995 0.002 250); /* cards, rail */
+  --sg-surface-2: oklch(0.955 0.006 250); /* wells, hover, inputs */
+  --sg-surface-3: oklch(0.925 0.008 250); /* pressed, bar tracks */
+  --sg-line: oklch(0.885 0.01 250);
+  --sg-line-strong: oklch(0.8 0.014 250);
+
+  --sg-fg: oklch(0.22 0.02 255);
+  --sg-fg-muted: oklch(0.45 0.02 255);
+  --sg-fg-subtle: oklch(0.53 0.018 255);
+
+  --sg-vital: oklch(0.47 0.115 170);
+  --sg-vital-strong: oklch(0.41 0.11 170);
+  --sg-on-vital: oklch(0.99 0.01 170);
+  --sg-vital-soft: oklch(0.47 0.115 170 / 0.11);
+  --sg-trust: oklch(0.51 0.16 275);
+  --sg-trust-soft: oklch(0.51 0.16 275 / 0.1);
+  --sg-warn: oklch(0.51 0.13 65);
+  --sg-warn-soft: oklch(0.75 0.14 75 / 0.2);
+  --sg-danger: oklch(0.52 0.19 25);
+  --sg-danger-soft: oklch(0.52 0.19 25 / 0.12);
+  --sg-scrim: oklch(0.22 0.02 255 / 0.32);
+
+  --sg-shadow-1: 0 1px 2px oklch(0.3 0.03 255 / 0.06), 0 2px 8px oklch(0.3 0.03 255 / 0.05);
+  --sg-shadow-2: 0 2px 6px oklch(0.3 0.03 255 / 0.07), 0 12px 32px oklch(0.3 0.03 255 / 0.08);
+  --sg-shadow-3: 0 8px 20px oklch(0.3 0.03 255 / 0.1), 0 28px 64px oklch(0.3 0.03 255 / 0.14);
+
+  /* Type: Unbounded (bundled) only for titles and big numbers, the system face for everything else, mono for live values */
+  --sg-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --sg-font-display: "Unbounded", ui-rounded, "SF Pro Rounded", -apple-system, "Segoe UI Variable Display", system-ui, sans-serif;
+  --sg-font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  /* Shape and space */
+  --sg-radius: 16px; /* cards */
+  --sg-radius-sm: 10px; /* controls, rows */
+  --sg-radius-sheet: 22px; /* the settings sheet */
+  --sg-gap: 16px;
+  --sg-pad: 20px;
+  --sg-edge: 28px; /* space between the edge of the content area and the cards */
+  --sg-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --sg-ease-state: cubic-bezier(0.25, 1, 0.5, 1);
+
+  /* Old names, kept so nothing outside this file breaks */
+  --sg-panel: var(--sg-surface-1);
+  --sg-panel-2: var(--sg-surface-3);
+  --sg-text: var(--sg-fg);
+  --sg-muted: var(--sg-fg-muted);
+  --sg-accent: var(--sg-vital);
+}
+
+/* ── Tokens: dark (the demo theme: projectors and dim rooms) ────────── */
+
+.sg-app[data-theme="dark"] {
+  color-scheme: dark;
+  --sg-bg: oklch(0.165 0.012 250);
+  --sg-surface-1: oklch(0.205 0.014 250);
+  --sg-surface-2: oklch(0.245 0.016 250);
+  --sg-surface-3: oklch(0.29 0.018 250);
+  --sg-line: oklch(0.32 0.018 250);
+  --sg-line-strong: oklch(0.42 0.02 250);
+
+  --sg-fg: oklch(0.96 0.006 250);
+  --sg-fg-muted: oklch(0.75 0.015 250);
+  --sg-fg-subtle: oklch(0.66 0.016 250);
+
+  --sg-vital: oklch(0.84 0.15 165);
+  --sg-vital-strong: oklch(0.76 0.15 165);
+  --sg-on-vital: oklch(0.21 0.04 170);
+  --sg-vital-soft: oklch(0.84 0.15 165 / 0.14);
+  --sg-trust: oklch(0.76 0.12 275);
+  --sg-trust-soft: oklch(0.76 0.12 275 / 0.14);
+  --sg-warn: oklch(0.83 0.14 75);
+  --sg-warn-soft: oklch(0.83 0.14 75 / 0.14);
+  --sg-danger: oklch(0.73 0.16 25);
+  --sg-danger-soft: oklch(0.73 0.16 25 / 0.16);
+  --sg-scrim: oklch(0 0 0 / 0.5);
+
+  --sg-shadow-1: 0 1px 2px oklch(0 0 0 / 0.3), 0 2px 8px oklch(0 0 0 / 0.2);
+  --sg-shadow-2: 0 2px 6px oklch(0 0 0 / 0.3), 0 12px 32px oklch(0 0 0 / 0.35);
+  --sg-shadow-3: 0 8px 20px oklch(0 0 0 / 0.35), 0 28px 64px oklch(0 0 0 / 0.5);
+}
+
+/* The page behind the app (seen while resizing, and under the dev panel) */
+html[data-sg-theme="light"] {
+  background: oklch(0.975 0.004 250);
+  color-scheme: light;
+}
+html[data-sg-theme="dark"] {
+  background: oklch(0.165 0.012 250);
+  color-scheme: dark;
+}
+
+/* ── Base ───────────────────────────────────────────────────────────── */
 
 .sg-host {
   box-sizing: border-box;
@@ -11,45 +116,20 @@ body.sg-host {
 }
 
 .sg-app {
-  /* Colours */
-  --sg-bg: #ffffff;
-  --sg-panel: #f4f3ef; /* bone: the one card colour */
-  --sg-panel-2: #e8e6df; /* one step darker: ring tracks, bar tracks */
-  --sg-text: #1f201d;
-  --sg-muted: #5b5a55;
-  --sg-line: #e6e4dd;
-  --sg-control: #d2d0c8;
-  --sg-accent: #1d5fbf; /* the one accent: main buttons, progress rings */
-  --sg-accent-hover: #184f9f;
-  --sg-good: #2e7d32;
-  --sg-ok: #b26a00;
-  --sg-bad: #b42318;
-  --sg-pill-bad-bg: #fbe3df;
-  --sg-pill-bad-ink: #7a1d14;
-  --sg-camera-bg: #2b2c29;
-
-  /* Shape and space */
-  --sg-radius: 20px;
-  --sg-radius-sm: 12px;
-  --sg-gap: 16px;
-  --sg-pad: 20px;
-  --sg-edge: 24px; /* space between the window edge and the cards */
-
   position: relative;
   height: 100%;
   display: flex;
-  flex-direction: column;
   overflow: hidden;
   background: var(--sg-bg);
-  color: var(--sg-text);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, Roboto, "Helvetica Neue", Arial, sans-serif;
+  color: var(--sg-fg);
+  font-family: var(--sg-font);
   font-size: 14px;
-  line-height: 1.45;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.24s ease, color 0.24s ease;
   /* Lets the layout react to the app's own size (see the @container rules at the bottom) */
   container: sg-app / size;
 }
-
 .sg-app *,
 .sg-app *::before,
 .sg-app *::after {
@@ -62,65 +142,72 @@ body.sg-host {
   display: none !important;
 }
 .sg-app :focus-visible {
-  outline: 2px solid var(--sg-accent);
+  outline: 2px solid var(--sg-trust);
   outline-offset: 2px;
 }
+.sg-app ::selection {
+  background: var(--sg-vital-soft);
+}
 
-/* ── Type ─────────────────────────────────────────────────────────────── */
+/* ── Type ───────────────────────────────────────────────────────────── */
 
 .sg-title {
-  font-size: 30px;
-  font-weight: 650;
-  line-height: 1.12;
+  font-family: var(--sg-font-display);
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 1.15;
   letter-spacing: -0.02em;
-  max-width: 18em;
+  max-width: 16em;
   text-wrap: balance;
 }
 .sg-lede {
   font-size: 16px;
-  max-width: 44ch;
+  line-height: 1.55;
+  color: var(--sg-fg-muted);
+  max-width: 46ch;
 }
 .sg-h2 {
   font-size: 20px;
   font-weight: 600;
   line-height: 1.25;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
 }
 .sg-h3 {
   font-size: 15px;
   font-weight: 600;
-  line-height: 1.3;
+  line-height: 1.35;
 }
 .sg-label {
-  font-size: 13px;
-  color: var(--sg-muted);
+  font-size: 12.5px;
+  line-height: 18px;
+  color: var(--sg-fg-subtle);
 }
 .sg-note {
   font-size: 13px;
-  color: var(--sg-muted);
+  color: var(--sg-fg-muted);
 }
 
-/* ── Icons ────────────────────────────────────────────────────────────── */
+/* ── Icons ──────────────────────────────────────────────────────────── */
 
 .sg-icon {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   flex: none;
   fill: none;
   stroke: currentColor;
   stroke-width: 1.6;
   stroke-linecap: round;
   stroke-linejoin: round;
-  vertical-align: -3px;
+  vertical-align: -4px;
 }
 .sg-mark {
-  width: 22px;
-  height: 22px;
-  fill: var(--sg-accent);
+  width: 24px;
+  height: 24px;
+  fill: var(--sg-vital);
   flex: none;
 }
 
-/* ── Buttons ──────────────────────────────────────────────────────────── */
+/* ── Buttons ────────────────────────────────────────────────────────── */
 
 .sg-btn {
   appearance: none;
@@ -128,110 +215,406 @@ body.sg-host {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 38px;
+  height: 40px;
   padding: 0 18px;
   border: 1px solid transparent;
-  border-radius: 999px;
+  border-radius: var(--sg-radius-sm);
   font: inherit;
   font-size: 14px;
   font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
-  transition: background-color 0.12s, border-color 0.12s, color 0.12s, transform 0.08s;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s, transform 0.1s var(--sg-ease-state);
 }
 .sg-btn:active:not(:disabled) {
-  transform: scale(0.97);
+  transform: scale(0.98);
 }
 .sg-btn:disabled {
   cursor: default;
-  opacity: 0.75;
+  opacity: 0.6;
+}
+.sg-btn-sm {
+  height: 34px;
+  padding: 0 14px;
+  font-size: 13px;
 }
 .sg-btn-primary {
-  background: var(--sg-accent);
-  color: #fff;
+  background: var(--sg-vital);
+  color: var(--sg-on-vital);
 }
 .sg-btn-primary:hover:not(:disabled) {
-  background: var(--sg-accent-hover);
+  background: var(--sg-vital-strong);
 }
 .sg-btn-secondary {
-  background: var(--sg-bg);
-  color: var(--sg-text);
-  border-color: var(--sg-control);
+  background: var(--sg-surface-1);
+  color: var(--sg-fg);
+  border-color: var(--sg-line-strong);
 }
 .sg-btn-secondary:hover:not(:disabled) {
-  border-color: #a9a79f;
+  background: var(--sg-surface-2);
 }
 .sg-btn-quiet {
   height: 34px;
   padding: 0 12px;
   background: transparent;
-  color: var(--sg-text);
-  font-weight: 500;
+  color: var(--sg-fg-muted);
+  font-weight: 550;
 }
 .sg-btn-quiet:hover {
-  background: var(--sg-panel);
+  background: var(--sg-surface-2);
+  color: var(--sg-fg);
 }
 .sg-btn-text {
   padding: 0 10px;
   background: transparent;
-  color: var(--sg-muted);
-  font-weight: 500;
+  color: var(--sg-fg-muted);
+  font-weight: 550;
 }
 .sg-btn-text:hover {
-  color: var(--sg-text);
-  text-decoration: underline;
+  color: var(--sg-fg);
+  background: var(--sg-surface-2);
 }
 .sg-btn-icon {
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   padding: 0;
   background: transparent;
-  color: var(--sg-text);
+  color: var(--sg-fg-muted);
 }
 .sg-btn-icon:hover {
-  background: var(--sg-panel);
+  background: var(--sg-surface-2);
+  color: var(--sg-fg);
+}
+.sg-btn .sg-icon {
+  width: 16px;
+  height: 16px;
+  vertical-align: 0;
+}
+/* Top-bar tools (Camera, Pause): small outlined buttons, so they clearly look clickable */
+.sg-btn-tool {
+  height: 34px;
+  padding: 0 12px;
+  gap: 7px;
+  background: var(--sg-surface-1);
+  border-color: var(--sg-line-strong);
+  color: var(--sg-fg);
+  font-size: 13px;
+  font-weight: 550;
+}
+.sg-btn-tool:hover:not(:disabled) {
+  background: var(--sg-surface-2);
+}
+/* The little on/off switch inside the Camera button */
+.sg-tool-switch {
+  position: relative;
+  width: 28px;
+  height: 16px;
+  border-radius: 999px;
+  background: var(--sg-surface-3);
+  box-shadow: inset 0 0 0 1px var(--sg-line-strong);
+  transition: background-color 0.2s, box-shadow 0.2s;
+}
+.sg-tool-switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--sg-surface-1);
+  box-shadow: var(--sg-shadow-1);
+  transition: transform 0.2s var(--sg-ease-state);
+}
+.sg-btn-tool[data-state="on"] .sg-icon {
+  color: var(--sg-vital);
+}
+.sg-btn-tool[data-state="on"] .sg-tool-switch {
+  background: var(--sg-vital);
+  box-shadow: none;
+}
+.sg-btn-tool[data-state="on"] .sg-tool-switch::after {
+  transform: translateX(12px);
+}
+.sg-btn-tool[data-state="starting"] .sg-tool-switch::after {
+  transform: translateX(6px);
+}
+.sg-btn-icon .sg-icon {
+  width: 18px;
+  height: 18px;
 }
 
-/* ── Header and footer ────────────────────────────────────────────────── */
+/* ── Rail: navigation and the Maizy dock ────────────────────────────── */
 
-.sg-header {
+.sg-rail {
   flex: none;
-  height: 56px;
+  width: 232px;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 0 var(--sg-edge);
+  flex-direction: column;
+  padding: 0 12px 12px;
+  background: var(--sg-surface-1);
+  border-right: 1px solid var(--sg-line);
+  transition: background-color 0.24s ease, border-color 0.24s ease;
+}
+.sg-app[data-screen="welcome"] .sg-rail {
+  display: none; /* first run: just the welcome, no navigation yet */
 }
 .sg-brand {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 15px;
+  gap: 10px;
+  height: 60px;
+  padding: 0 12px;
+  font-family: var(--sg-font-display);
+  font-size: 16px;
   font-weight: 650;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
 }
-.sg-header-tools {
+.sg-brand-name span {
+  color: var(--sg-vital);
+}
+.sg-rail-nav {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+/* A thin line between the screens and Settings */
+.sg-rail-sep {
+  height: 1px;
+  margin: 8px 12px;
+  background: var(--sg-line);
+}
+.sg-nav {
+  appearance: none;
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 12px;
+  height: 40px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--sg-radius-sm);
+  background: transparent;
+  color: var(--sg-fg-muted);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 550;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s, transform 0.1s var(--sg-ease-state);
 }
-.sg-status {
+.sg-nav:hover {
+  background: var(--sg-surface-2);
+  color: var(--sg-fg);
+}
+.sg-nav:active {
+  transform: scale(0.98);
+}
+.sg-nav .sg-icon {
+  width: 20px;
+  height: 20px;
+}
+/* The current screen is tinted mint, so it never looks like a hovered item */
+.sg-nav[aria-current="page"] {
+  background: var(--sg-vital-soft);
+  color: var(--sg-fg);
+  font-weight: 600;
+}
+.sg-nav[aria-current="page"] .sg-icon {
+  color: var(--sg-vital);
+  stroke-width: 2;
+}
+/* The thin mint bar on the left of the current item */
+.sg-nav[aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  top: 9px;
+  bottom: 9px;
+  left: 0;
+  width: 3px;
+  border-radius: 3px;
+  background: var(--sg-vital);
+  animation: sg-indicator 0.28s var(--sg-ease-out);
+}
+@keyframes sg-indicator {
+  from {
+    transform: scaleY(0.3);
+    opacity: 0;
+  }
+}
+/* "Live" tag on Stretches while a stretch runs and you're on another screen */
+.sg-nav-live {
+  margin-left: auto;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--sg-vital);
+  color: var(--sg-on-vital);
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 18px;
+}
+
+.sg-dock {
+  flex: none;
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: var(--sg-radius);
+  background: var(--sg-surface-2);
+}
+.sg-dock-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.sg-dock-maizy {
+  flex: none;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--sg-surface-1);
+  overflow: hidden;
+}
+.sg-dock-text {
+  min-width: 0;
+}
+.sg-dock-score {
+  font-family: var(--sg-font-display);
+  font-size: 23px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.sg-dock-score[data-tone="good"] {
+  color: var(--sg-vital);
+}
+.sg-dock-score[data-tone="ok"] {
+  color: var(--sg-warn);
+}
+.sg-dock-score[data-tone="bad"] {
+  color: var(--sg-danger);
+}
+.sg-dock-score[data-tone="none"] {
+  color: var(--sg-fg-subtle);
+}
+.sg-dock-word {
+  margin-top: 4px;
+  font-size: 12.5px;
+  line-height: 18px;
+  color: var(--sg-fg-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Body: top bar, screens, footer ─────────────────────────────────── */
+
+.sg-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  container: sg-body / size;
+}
+
+.sg-header {
+  flex: none;
+  min-height: 76px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px var(--sg-edge) 10px;
+}
+.sg-header-brand {
+  display: none;
+  padding: 0;
+}
+.sg-app[data-screen="welcome"] .sg-header-brand {
+  display: flex;
+}
+.sg-app[data-screen="welcome"] .sg-heading {
+  display: none;
+}
+.sg-heading {
+  min-width: 0;
+}
+.sg-screen-title {
+  font-family: var(--sg-font-display);
+  font-size: 23px;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+.sg-screen-lede {
+  margin-top: 4px;
+  font-size: 13.5px;
+  color: var(--sg-fg-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sg-header-tools {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+/* Status pill: dot + one word. Click it to turn the camera on or off. */
+.sg-pill-status {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin-right: 8px;
-  font-size: 13px;
-  color: var(--sg-muted);
+  height: 30px;
+  margin-right: 4px;
+  padding: 0 11px;
+  border-radius: 999px;
+  background: var(--sg-surface-2);
+  font-size: 12.5px;
+  font-weight: 550;
+  color: var(--sg-fg-muted);
+  white-space: nowrap;
+  border: 0;
+  font-family: inherit;
+  cursor: pointer;
+}
+.sg-pill-status:hover:not(:disabled) {
+  filter: brightness(0.95);
+}
+.sg-pill-status:disabled {
+  cursor: default;
+}
+.sg-pill-status .sg-icon {
+  width: 15px;
+  height: 15px;
+}
+.sg-pill-status[data-tone="good"] {
+  color: var(--sg-vital);
+  background: var(--sg-vital-soft);
 }
 .sg-status-dot {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  background: var(--sg-good);
+  background: currentColor;
 }
-.sg-status[data-tone="off"] .sg-status-dot {
-  background: #a3a19a;
+.sg-pill-status[data-tone="good"] .sg-status-dot {
+  animation: sg-breathe 2.4s ease-in-out infinite;
+}
+@keyframes sg-breathe {
+  50% {
+    opacity: 0.35;
+  }
+}
+.sg-pill-status[data-tone="off"] {
+  color: var(--sg-fg-muted);
 }
 
 .sg-footer {
@@ -241,12 +624,12 @@ body.sg-host {
   align-items: center;
   gap: 4px 16px;
   flex-wrap: wrap;
-  padding: 10px var(--sg-edge) 12px;
+  padding: 10px var(--sg-edge) 14px;
   font-size: 12px;
-  color: var(--sg-muted);
+  color: var(--sg-fg-subtle);
 }
 .sg-footer strong {
-  color: var(--sg-text);
+  color: var(--sg-fg-muted);
   font-weight: 600;
 }
 .sg-footer-private {
@@ -257,6 +640,7 @@ body.sg-host {
 .sg-footer-private .sg-icon {
   width: 14px;
   height: 14px;
+  color: var(--sg-trust);
 }
 
 /* ── The grid: one layout per screen ──────────────────────────────────────
@@ -267,7 +651,7 @@ body.sg-host {
 .sg-main {
   flex: 1;
   min-height: 0;
-  padding: 0 var(--sg-edge);
+  padding: 6px var(--sg-edge) 0;
 }
 .sg-grid {
   height: 100%;
@@ -283,7 +667,7 @@ body.sg-host {
 }
 /* Calibration, dashboard, stretch: You | Maizy | ring on top, the screen's panel below */
 .sg-app:not([data-screen="welcome"]) .sg-grid {
-  grid-template-columns: minmax(0, 5fr) minmax(0, 4fr) minmax(0, 3fr);
+  grid-template-columns: minmax(0, 5fr) minmax(0, 4fr) minmax(0, 3.4fr);
 }
 /* Dashboard: the issues list needs the taller bottom row */
 .sg-app[data-screen="dashboard"] .sg-grid {
@@ -314,15 +698,35 @@ body.sg-host {
   display: contents;
 }
 
-/* ── Cards ────────────────────────────────────────────────────────────── */
+/* Screen change: the screen's own cards rise in (camera and Maizy stay put) */
+.sg-screen .sg-card,
+.sg-welcome {
+  animation: sg-enter 0.28s var(--sg-ease-out) both;
+}
+.sg-screen .sg-card:nth-child(2) {
+  animation-delay: 0.04s;
+}
+.sg-screen .sg-card:nth-child(3) {
+  animation-delay: 0.08s;
+}
+@keyframes sg-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* ── Cards ──────────────────────────────────────────────────────────── */
 
 .sg-card {
   min-width: 0;
   min-height: 0;
   overflow: hidden;
   padding: var(--sg-pad);
-  background: var(--sg-panel);
+  background: var(--sg-surface-1);
   border-radius: var(--sg-radius);
+  box-shadow: var(--sg-shadow-1);
+  transition: background-color 0.24s ease;
 }
 .sg-card-head {
   display: flex;
@@ -337,15 +741,15 @@ body.sg-host {
   gap: 8px 14px;
 }
 
-/* ── 1. Welcome ───────────────────────────────────────────────────────── */
+/* ── 1. Welcome ─────────────────────────────────────────────────────── */
 
 .sg-welcome {
   grid-area: welcome;
   display: flex;
   flex-direction: column;
   justify-content: safe center; /* "safe": if it's too tall, scroll instead of cutting off the top */
-  gap: 20px;
-  padding: 32px 36px;
+  gap: 22px;
+  padding: 40px 44px;
   overflow: auto;
   container-type: inline-size;
 }
@@ -353,48 +757,79 @@ body.sg-host {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 16px;
+  align-items: stretch;
+}
+/* "How it works" as numbered rows */
+.sg-steps {
+  margin-top: 10px;
+  padding: 0;
+  list-style: none;
+  counter-reset: sg-step;
+  display: grid;
+  gap: 10px;
+}
+.sg-steps li {
+  counter-increment: sg-step;
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  gap: 10px;
   align-items: start;
 }
-.sg-steps {
-  margin-top: 8px;
-  padding-left: 1.3em;
+.sg-steps li::before {
+  content: counter(sg-step);
   display: grid;
-  gap: 6px;
-}
-.sg-steps li::marker {
-  color: var(--sg-muted);
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--sg-vital-soft);
+  color: var(--sg-vital);
+  font-family: var(--sg-font-display);
+  font-size: 13px;
+  font-weight: 650;
   font-variant-numeric: tabular-nums;
 }
+/* Privacy promise in the trust colour */
 .sg-privacy {
-  padding: 14px 16px;
-  background: var(--sg-bg);
+  padding: 16px 18px;
+  background: var(--sg-trust-soft);
   border-radius: var(--sg-radius-sm);
 }
 .sg-privacy .sg-h3 {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  color: var(--sg-trust);
 }
 .sg-privacy p {
   margin-top: 6px;
-  color: var(--sg-muted);
+  color: var(--sg-fg-muted);
+}
+.sg-welcome .sg-btn-primary {
+  height: 44px;
+  padding: 0 22px;
+  font-size: 15px;
 }
 .sg-alert {
   display: grid;
   gap: 4px;
   padding: 12px 14px;
   border-radius: var(--sg-radius-sm);
-  background: var(--sg-pill-bad-bg);
-  color: var(--sg-pill-bad-ink);
+  background: var(--sg-danger-soft);
+  color: var(--sg-danger);
+}
+.sg-alert span {
+  color: var(--sg-fg);
 }
 
-/* ── Camera slot ──────────────────────────────────────────────────────── */
+/* ── Camera slot ────────────────────────────────────────────────────── */
 
 .sg-camera {
   grid-area: cam;
   position: relative;
   padding: 0;
-  background: var(--sg-camera-bg);
+  background: var(--sg-surface-2);
+  box-shadow: none;
 }
 /* Video and overlay are stacked exactly, cropped the same way, and mirrored. */
 .sg-camera video,
@@ -413,28 +848,61 @@ body.sg-host {
   position: absolute;
   inset: 0;
   display: grid;
-  place-items: center;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  padding: 20px;
   font-size: 13px;
-  color: #cfcdc5;
+  text-align: center;
+  color: var(--sg-fg-subtle);
+}
+.sg-camera-off span {
+  max-width: 36ch;
+}
+/* While it's showing: sit above the empty <video> (so its button can be clicked) and hide
+   any skeleton lines left on the overlay */
+.sg-camera-off:not([hidden]) {
+  z-index: 1;
+}
+.sg-camera-off:not([hidden]) ~ canvas {
+  visibility: hidden;
+}
+.sg-camera-off .sg-btn {
+  margin-top: 4px;
+}
+/* A camera-off icon above the words (drawn with CSS, so the markup stays the same) */
+.sg-camera-off::before {
+  content: "";
+  width: 36px;
+  height: 36px;
+  background: currentColor;
+  opacity: 0.7;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 3l18 18M8.5 6.5h4.5a2.5 2.5 0 0 1 2.5 2.5v2l6-3.5v10l-2.2-1.3M15.5 17.5h-10.5A2.5 2.5 0 0 1 2.5 15V9a2.5 2.5 0 0 1 1.9-2.4'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 3l18 18M8.5 6.5h4.5a2.5 2.5 0 0 1 2.5 2.5v2l6-3.5v10l-2.2-1.3M15.5 17.5h-10.5A2.5 2.5 0 0 1 2.5 15V9a2.5 2.5 0 0 1 1.9-2.4'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 .sg-chip {
   position: absolute;
   left: 12px;
   bottom: 12px;
-  padding: 4px 10px;
+  padding: 5px 11px;
   border-radius: 999px;
-  background: rgba(20, 20, 18, 0.75);
-  color: #fff;
+  background: oklch(0.2 0.015 250 / 0.72);
+  color: oklch(0.98 0.005 250);
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 550;
+  backdrop-filter: blur(8px);
 }
 
-/* ── Maizy slot ───────────────────────────────────────────────────────── */
+/* ── Maizy slot ─────────────────────────────────────────────────────── */
 
 .sg-maizy-card {
   grid-area: maizy;
   padding: 0;
   display: flex;
+  /* A soft floor of light under her, in the health colour */
+  background:
+    radial-gradient(ellipse 60% 22% at 50% 92%, var(--sg-vital-soft), transparent 70%),
+    var(--sg-surface-1);
 }
 #maizy {
   position: relative;
@@ -443,7 +911,7 @@ body.sg-host {
   min-height: 0;
 }
 
-/* ── Ring card (score, calibration, countdown) ────────────────────────── */
+/* ── Ring card (score, calibration, countdown) ──────────────────────── */
 
 .sg-side {
   grid-area: side;
@@ -456,27 +924,28 @@ body.sg-host {
 }
 .sg-side .sg-label {
   align-self: stretch;
+  text-align: left;
 }
 .sg-ring {
-  --ring: var(--sg-accent);
+  --ring: var(--sg-vital);
   position: relative;
   flex: none;
-  width: min(156px, 86cqw, calc(100cqh - 98px)); /* 98px = label + verdict + subline */
+  width: min(188px, 88cqw, calc(100cqh - 104px)); /* 104px = label + verdict + subline */
   aspect-ratio: 1;
   margin: auto 0;
   container-type: inline-size;
 }
 .sg-ring[data-tone="good"] {
-  --ring: var(--sg-good);
+  --ring: var(--sg-vital);
 }
 .sg-ring[data-tone="ok"] {
-  --ring: var(--sg-ok);
+  --ring: var(--sg-warn);
 }
 .sg-ring[data-tone="bad"] {
-  --ring: var(--sg-bad);
+  --ring: var(--sg-danger);
 }
 .sg-ring[data-tone="none"] {
-  --ring: var(--sg-muted);
+  --ring: var(--sg-fg-subtle);
 }
 .sg-ring svg {
   display: block;
@@ -487,17 +956,17 @@ body.sg-host {
 .sg-ring-track,
 .sg-ring-bar {
   fill: none;
-  stroke-width: 10;
+  stroke-width: 7;
 }
 .sg-ring-track {
-  stroke: var(--sg-panel-2);
+  stroke: var(--sg-surface-3);
 }
 .sg-ring-bar {
   stroke: var(--ring);
   stroke-linecap: round;
   stroke-dasharray: 100;
   stroke-dashoffset: 100;
-  transition: stroke-dashoffset 0.35s ease, stroke 0.35s;
+  transition: stroke-dashoffset 0.6s var(--sg-ease-out), stroke 0.35s;
 }
 /* An empty ring would still show a round dot, so hide it */
 .sg-ring-bar:not([data-offset]),
@@ -510,21 +979,30 @@ body.sg-host {
   display: grid;
   place-items: center;
 }
+/* The big number: rounded display face, digits all the same width */
 .sg-ring-value {
-  font-size: 32cqi;
+  font-family: var(--sg-font-display);
+  font-size: 34cqi;
   font-weight: 600;
   line-height: 1;
   letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
   color: var(--ring);
 }
+/* Unbounded is wide: three or four characters ("100", "57%") get smaller */
+.sg-ring-value[data-len="3"] {
+  font-size: 27cqi;
+}
+.sg-ring-value[data-len="4"] {
+  font-size: 22cqi;
+}
 .sg-ring[data-tone="accent"] .sg-ring-value {
-  color: var(--sg-text);
+  color: var(--sg-fg);
 }
 .sg-ring[data-tone="none"] .sg-ring-value {
-  font-size: 22cqi;
-  font-weight: 500;
-  color: var(--sg-muted);
+  font-size: 24cqi;
+  font-weight: 550;
+  color: var(--sg-fg-subtle);
 }
 /* The tick shown when calibration is done */
 .sg-ring-value[data-icon="check"]::before {
@@ -532,24 +1010,25 @@ body.sg-host {
   display: block;
   width: 36cqi;
   height: 36cqi;
-  background: var(--sg-good);
+  background: var(--sg-vital);
   -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / contain no-repeat;
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 .sg-verdict {
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 600;
   line-height: 1.3;
+  letter-spacing: -0.01em;
 }
 .sg-subverdict {
   font-size: 13px;
-  color: var(--sg-muted);
-  line-height: 1.35;
+  color: var(--sg-fg-muted);
+  line-height: 1.4;
   max-width: 24ch;
-  min-height: 2.7em; /* keeps the ring still when this text changes length */
+  min-height: 2.8em; /* keeps the ring still when this text changes length */
 }
 
-/* ── 2. Calibration panel ─────────────────────────────────────────────── */
+/* ── 2. Calibration panel ───────────────────────────────────────────── */
 
 .sg-panel {
   grid-area: panel;
@@ -558,31 +1037,50 @@ body.sg-host {
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
   align-items: center;
-  gap: 24px 32px;
-  padding: 24px 28px;
+  gap: 24px 36px;
+  padding: 26px 30px;
 }
 .sg-tips {
-  margin-top: 12px;
-  padding-left: 1.1em;
+  margin-top: 14px;
+  padding: 0;
+  list-style: none;
   display: grid;
-  gap: 6px;
+  gap: 8px;
   font-size: 15px;
+}
+.sg-tips li {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 10px;
+}
+/* A mint tick in front of each tip */
+.sg-tips li::before {
+  content: "";
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  background: var(--sg-vital);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 .sg-calib-action {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 14px;
+  padding-left: 32px;
+  border-left: 1px solid var(--sg-line);
 }
 .sg-calib-message {
   font-size: 15px;
+  color: var(--sg-fg-muted);
   max-width: 40ch;
 }
 .sg-calib-message[data-tone="bad"] {
-  color: var(--sg-bad);
+  color: var(--sg-danger);
 }
 
-/* ── 3. Dashboard: issues and suggested stretch ───────────────────────── */
+/* ── 3. Dashboard: issues and suggested stretch ─────────────────────── */
 
 .sg-issues {
   grid-area: issues;
@@ -591,8 +1089,9 @@ body.sg-host {
   gap: 10px;
 }
 .sg-count {
-  font-size: 13px;
-  color: var(--sg-muted);
+  font-size: 12.5px;
+  font-weight: 550;
+  color: var(--sg-fg-muted);
   font-variant-numeric: tabular-nums;
 }
 .sg-empty {
@@ -602,12 +1101,13 @@ body.sg-host {
   align-items: flex-start;
   justify-content: center;
   gap: 12px;
-  padding: 16px 18px;
-  border: 1px dashed var(--sg-control);
+  padding: 18px 20px;
   border-radius: var(--sg-radius-sm);
+  background: var(--sg-surface-2);
 }
 .sg-empty p {
   font-size: 15px;
+  color: var(--sg-fg-muted);
   max-width: 48ch;
 }
 .sg-issue-list {
@@ -622,53 +1122,69 @@ body.sg-host {
 }
 /* One row per posture check. data-state: "fine" | "active" | "sustained" */
 .sg-issue {
+  flex: none; /* when space is short the list scrolls; rows never squash into each other */
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(70px, 150px) 132px;
+  grid-template-columns: minmax(0, 1fr) minmax(70px, 160px) 158px;
   align-items: center;
   gap: 16px;
-  min-height: 44px;
-  padding: 4px 12px 4px 8px;
+  min-height: 46px;
+  padding: 4px 12px 4px 10px;
   border-radius: var(--sg-radius-sm);
   line-height: 1.3;
+  transition: background-color 0.2s;
 }
-.sg-issue[data-state="active"],
+.sg-issue[data-state="active"] {
+  background: var(--sg-warn-soft);
+}
 .sg-issue[data-state="sustained"] {
-  background: var(--sg-bg);
+  background: var(--sg-danger-soft);
 }
 .sg-issue-names {
   display: flex;
   flex-direction: column;
   min-width: 0;
 }
+.sg-issue-title,
+.sg-issue-plain {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .sg-issue-title {
   font-weight: 600;
 }
 .sg-issue[data-state="fine"] .sg-issue-title {
   font-weight: 500;
+  color: var(--sg-fg-muted);
 }
 .sg-issue-plain {
-  font-size: 13px;
-  color: var(--sg-muted);
+  font-size: 12.5px;
+  color: var(--sg-fg-subtle);
+}
+.sg-issue[data-state="active"] .sg-issue-plain,
+.sg-issue[data-state="sustained"] .sg-issue-plain {
+  color: var(--sg-fg-muted);
 }
 .sg-bar {
-  height: 8px;
+  height: 6px;
   border-radius: 999px;
-  background: var(--sg-panel-2);
+  background: var(--sg-surface-3);
   overflow: hidden;
 }
 .sg-bar-fill {
   display: block;
   height: 100%;
-  background: #a9a79f; /* fine: grey */
+  border-radius: inherit;
+  background: var(--sg-line-strong); /* fine: grey */
   transform: scaleX(0);
   transform-origin: left center;
   transition: transform 0.2s linear, background-color 0.3s;
 }
 .sg-issue[data-state="active"] .sg-bar-fill {
-  background: var(--sg-ok);
+  background: var(--sg-warn);
 }
 .sg-issue[data-state="sustained"] .sg-bar-fill {
-  background: var(--sg-bad);
+  background: var(--sg-danger);
 }
 .sg-issue-meta {
   display: flex;
@@ -677,19 +1193,24 @@ body.sg-host {
   gap: 8px;
 }
 .sg-pill {
-  padding: 2px 8px;
+  padding: 2px 9px;
   border-radius: 999px;
-  background: var(--sg-pill-bad-bg);
-  color: var(--sg-pill-bad-ink);
+  background: var(--sg-danger-soft);
+  color: var(--sg-danger);
   font-size: 12px;
   font-weight: 600;
 }
 .sg-issue-time {
   min-width: 44px;
+  white-space: nowrap;
   text-align: right;
-  font-size: 13px;
-  color: var(--sg-muted);
+  font-family: var(--sg-font-mono);
+  font-size: 12.5px;
+  color: var(--sg-fg-subtle);
   font-variant-numeric: tabular-nums;
+}
+.sg-issue[data-state="fine"] .sg-issue-time {
+  font-family: var(--sg-font);
 }
 
 .sg-tip {
@@ -698,16 +1219,38 @@ body.sg-host {
   flex-direction: column;
   gap: 4px;
 }
+/* Both suggested-stretch cards (dashboard and picker): nothing shrinks. ui.js shows as many
+   whole lines of the description as fit (fitTipText), so no line is cut in half. */
+.sg-tip > *,
+.sg-pick-side > * {
+  flex-shrink: 0;
+}
 .sg-tip .sg-h3 {
-  margin-top: 4px;
-  font-size: 16px;
+  margin-top: 6px;
+  font-size: 18px;
+  letter-spacing: -0.01em;
 }
 .sg-tip-for {
+  align-self: flex-start;
+  margin-top: 6px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--sg-vital-soft);
+  color: var(--sg-vital);
+  font-size: 12.5px;
+  font-weight: 550;
+}
+/* No issue right now: the line is plain text, not a chip */
+.sg-tip-for[data-chip="no"] {
+  padding: 0;
+  background: none;
+  color: var(--sg-fg-muted);
   font-size: 13px;
-  color: var(--sg-muted);
+  font-weight: 400;
 }
 .sg-tip-how {
-  margin-top: 6px;
+  margin-top: 10px;
+  color: var(--sg-fg-muted);
   display: -webkit-box;
   -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
@@ -715,68 +1258,185 @@ body.sg-host {
 }
 .sg-tip-foot {
   margin-top: auto;
-  padding-top: 10px;
+  padding-top: 12px;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 6px 12px;
 }
+.sg-tip-foot .sg-note {
+  font-family: var(--sg-font-mono);
+  font-size: 12.5px;
+}
 
-/* ── 4. Guided stretch panel ──────────────────────────────────────────── */
+/* ── 4. Guided stretch panel ────────────────────────────────────────── */
 
 .sg-guide {
   display: grid;
   grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
   align-items: center;
-  gap: 16px 32px;
-  padding: 22px 28px;
+  gap: 16px 36px;
+  padding: 24px 30px;
 }
 .sg-step-text {
-  margin-top: 8px;
+  margin-top: 10px;
   max-width: 40ch;
-  font-size: 22px;
-  font-weight: 500;
+  font-size: 24px;
+  font-weight: 550;
   line-height: 1.3;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
 }
 .sg-next {
-  margin-top: 8px;
-  color: var(--sg-muted);
+  margin-top: 10px;
+  color: var(--sg-fg-muted);
 }
 .sg-guide-action {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 14px;
+  padding-left: 32px;
+  border-left: 1px solid var(--sg-line);
 }
 .sg-safety {
   max-width: 34ch;
   font-size: 14px;
+  color: var(--sg-fg-muted);
 }
 
-/* ── 5. Settings panel ────────────────────────────────────────────────── */
+/* ── 4b. Stretch picker (no stretch running) ────────────────────────── */
+
+/* data-stretching on .sg-app: "yes" shows the guide, "no" shows the picker */
+.sg-app[data-stretching="yes"] .sg-stretch-pick,
+.sg-app[data-stretching="no"] .sg-stretch-live {
+  display: none;
+}
+/* The list takes the room it needs, but the top row keeps at least 250px (the list scrolls then) */
+.sg-app[data-screen="stretch"][data-stretching="no"] .sg-grid {
+  grid-template-rows: minmax(250px, 1fr) minmax(0, auto);
+}
+.sg-pick-side {
+  grid-area: side;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.sg-pick-side .sg-h2 {
+  margin-top: 6px;
+}
+.sg-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.sg-pick-list {
+  list-style: none;
+  margin: 0;
+  padding: 2px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  align-content: start;
+  gap: 8px;
+  overflow: auto;
+  min-height: 0;
+}
+/* One stretch: the whole row is the button */
+.sg-pick {
+  appearance: none;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 10px 10px 14px;
+  border: 1px solid var(--sg-line);
+  border-radius: var(--sg-radius-sm);
+  background: var(--sg-surface-1);
+  color: var(--sg-fg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s, transform 0.1s var(--sg-ease-state);
+}
+.sg-pick:hover {
+  background: var(--sg-surface-2);
+  border-color: var(--sg-line-strong);
+}
+.sg-pick:active {
+  transform: scale(0.98);
+}
+.sg-pick[data-suggested="yes"] {
+  border-color: var(--sg-vital);
+}
+.sg-pick-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.sg-pick-name {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sg-pick-meta {
+  font-size: 12.5px;
+  color: var(--sg-fg-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* The round play button on the right */
+.sg-pick-go {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--sg-vital-soft);
+  color: var(--sg-vital);
+  transition: background-color 0.15s, color 0.15s;
+}
+.sg-pick-go .sg-icon {
+  width: 15px;
+  height: 15px;
+  margin-left: 2px;
+}
+.sg-pick:hover .sg-pick-go {
+  background: var(--sg-vital);
+  color: var(--sg-on-vital);
+}
+
+/* ── 5. Settings sheet ──────────────────────────────────────────────── */
 
 .sg-scrim {
   position: absolute;
   inset: 0;
   z-index: 10;
-  background: rgba(31, 32, 29, 0.3);
+  background: var(--sg-scrim);
+  animation: sg-fade 0.2s ease-out;
+}
+@keyframes sg-fade {
+  from {
+    opacity: 0;
+  }
 }
 .sg-settings {
   position: absolute;
-  top: 8px;
-  right: 8px;
-  bottom: 8px;
+  top: 10px;
+  right: 10px;
+  bottom: 10px;
   z-index: 11;
-  width: min(360px, calc(100% - 16px));
+  width: min(380px, calc(100% - 20px));
   display: flex;
   flex-direction: column;
-  padding: 18px 24px 20px;
+  padding: 20px 24px 22px;
   overflow: auto;
-  background: var(--sg-bg);
-  border-radius: var(--sg-radius);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18); /* it floats, so it gets a shadow */
-  animation: sg-slide-in 0.18s ease-out;
+  background: var(--sg-surface-1);
+  border-radius: var(--sg-radius-sheet);
+  box-shadow: var(--sg-shadow-3); /* it floats, so it gets the strongest shadow */
+  animation: sg-slide-in 0.28s var(--sg-ease-out);
 }
 @keyframes sg-slide-in {
   from {
@@ -791,7 +1451,7 @@ body.sg-host {
   margin-bottom: 6px;
 }
 .sg-setting {
-  padding: 16px 0;
+  padding: 18px 0;
   border-top: 1px solid var(--sg-line);
 }
 .sg-setting-row {
@@ -799,69 +1459,159 @@ body.sg-host {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  min-height: 38px;
+  min-height: 36px;
 }
 .sg-setting-title {
   font-weight: 600;
 }
 .sg-setting-value {
-  font-size: 13px;
-  color: var(--sg-muted);
+  font-size: 12.5px;
+  font-weight: 550;
+  color: var(--sg-vital);
 }
 .sg-setting-desc {
-  margin-top: 4px;
+  margin-top: 6px;
   font-size: 13px;
-  color: var(--sg-muted);
+  color: var(--sg-fg-muted);
 }
 .sg-range {
   width: 100%;
-  margin: 8px 0 2px;
-  accent-color: var(--sg-accent);
+  margin: 10px 0 2px;
+  accent-color: var(--sg-vital);
 }
 .sg-range-ends {
   display: flex;
   justify-content: space-between;
   font-size: 12px;
-  color: var(--sg-muted);
+  color: var(--sg-fg-subtle);
 }
 /* On/off switch built from a checkbox */
 .sg-switch {
   appearance: none;
   position: relative;
   flex: none;
-  width: 36px;
-  height: 20px;
+  width: 38px;
+  height: 22px;
   margin: 0;
   border-radius: 999px;
-  background: var(--sg-control);
+  background: var(--sg-surface-3);
+  box-shadow: inset 0 0 0 1px var(--sg-line-strong);
   cursor: pointer;
-  transition: background-color 0.15s;
+  transition: background-color 0.2s, box-shadow 0.2s;
 }
 .sg-switch::after {
   content: "";
   position: absolute;
-  top: 2px;
-  left: 2px;
+  top: 3px;
+  left: 3px;
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: #fff;
-  transition: transform 0.15s;
+  background: var(--sg-surface-1);
+  box-shadow: var(--sg-shadow-1);
+  transition: transform 0.2s var(--sg-ease-state);
 }
 .sg-switch:checked {
-  background: var(--sg-text);
+  background: var(--sg-vital);
+  box-shadow: none;
 }
 .sg-switch:checked::after {
   transform: translateX(16px);
 }
+/* Segmented control (Appearance): System | Light | Dark */
+.sg-segmented {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  margin-top: 10px;
+  padding: 4px;
+  border-radius: var(--sg-radius-sm);
+  background: var(--sg-surface-2);
+}
+.sg-segment {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--sg-fg-muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 550;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+.sg-segment .sg-icon {
+  width: 16px;
+  height: 16px;
+}
+.sg-segment:hover {
+  color: var(--sg-fg);
+}
+.sg-segment[aria-checked="true"] {
+  background: var(--sg-surface-1);
+  color: var(--sg-fg);
+  box-shadow: var(--sg-shadow-1);
+}
 
-/* ── Smaller windows ──────────────────────────────────────────────────── */
+/* ── Smaller windows ────────────────────────────────────────────────── */
 
-@container sg-app (max-width: 900px) {
+/* Below 1180px wide the rail becomes a 64px column of icons (labels become tooltips) */
+@container sg-app (max-width: 1180px) {
+  .sg-rail {
+    width: 68px;
+    padding-inline: 10px;
+    align-items: center;
+  }
+  .sg-rail .sg-brand {
+    padding: 0;
+    justify-content: center;
+  }
+  .sg-rail .sg-brand-name,
+  .sg-nav-label,
+  .sg-dock-text,
+  .sg-dock .sg-btn {
+    display: none;
+  }
+  .sg-rail-nav {
+    gap: 4px;
+    padding-top: 6px;
+  }
+  .sg-nav {
+    width: 44px;
+    justify-content: center;
+    padding: 0;
+  }
+  /* No room for the word "Live": just a mint dot */
+  .sg-nav-live {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 9px;
+    height: 9px;
+    margin: 0;
+    padding: 0;
+    font-size: 0;
+  }
+  .sg-dock {
+    padding: 0;
+    background: none;
+  }
+  .sg-dock-maizy {
+    width: 46px;
+    height: 46px;
+  }
+}
+
+@container sg-body (max-width: 900px) {
   .sg-header,
   .sg-main,
   .sg-footer {
-    --sg-edge: 16px;
+    --sg-edge: 18px;
   }
   .sg-grid {
     --sg-gap: 12px;
@@ -873,27 +1623,46 @@ body.sg-host {
     grid-template-columns: minmax(0, 8fr) minmax(0, 4fr);
   }
   .sg-welcome {
-    padding: 24px 26px;
+    padding: 28px 30px;
     gap: 16px;
   }
   .sg-title {
-    font-size: 26px;
+    font-size: 30px;
+  }
+  .sg-screen-lede {
+    display: none;
+  }
+  /* Camera and Pause shrink to their icons (the switch still shows the camera's state) */
+  .sg-tool-label {
+    display: none;
+  }
+  .sg-btn-tool {
+    padding: 0 10px;
   }
   .sg-calib,
   .sg-guide {
-    padding: 16px 22px;
+    padding: 18px 22px;
+  }
+  .sg-calib-action,
+  .sg-guide-action {
+    padding-left: 22px;
   }
   .sg-step-text {
-    font-size: 19px;
+    font-size: 20px;
   }
   .sg-issue {
+    grid-template-columns: minmax(0, 1fr) minmax(60px, 120px) auto;
     gap: 12px;
   }
 }
 
-@container sg-app (max-height: 640px) {
+@container sg-body (max-height: 640px) {
   .sg-header {
-    height: 50px;
+    min-height: 60px;
+    padding-block: 8px 6px;
+  }
+  .sg-screen-title {
+    font-size: 22px;
   }
   /* Keep all five posture checks visible on short windows */
   .sg-app[data-screen="dashboard"] .sg-grid {
@@ -904,16 +1673,16 @@ body.sg-host {
   }
   .sg-welcome {
     gap: 14px;
-    padding-block: 22px;
+    padding-block: 24px;
   }
   .sg-title {
-    font-size: 24px;
+    font-size: 28px;
   }
   .sg-lede {
     font-size: 15px;
   }
   .sg-steps {
-    gap: 3px;
+    gap: 6px;
   }
   .sg-issue {
     min-height: 42px;
@@ -922,15 +1691,25 @@ body.sg-host {
   .sg-tips {
     margin-top: 8px;
     font-size: 14px;
-    gap: 3px;
+    gap: 4px;
   }
   .sg-calib-message {
     font-size: 14px;
   }
+  /* Settings: tighter, so most of it fits without scrolling */
+  .sg-settings {
+    padding: 14px 22px 16px;
+  }
+  .sg-setting {
+    padding: 11px 0;
+  }
+  .sg-setting-desc {
+    margin-top: 2px;
+  }
 }
 
 /* The welcome card is narrow: stack "How it works" above the privacy note */
-@container (max-width: 520px) {
+@container (max-width: 560px) {
   .sg-welcome-body {
     grid-template-columns: minmax(0, 1fr);
     gap: 12px;
@@ -938,13 +1717,14 @@ body.sg-host {
 }
 
 /* Very small windows: one column that scrolls */
-@container sg-app (max-width: 720px) {
+@container sg-body (max-width: 720px) {
   .sg-main {
     overflow: auto;
     padding-bottom: 12px;
   }
   .sg-grid,
-  .sg-app[data-screen] .sg-grid {
+  .sg-app[data-screen] .sg-grid,
+  .sg-app[data-screen="stretch"][data-stretching="no"] .sg-grid {
     height: auto;
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: none;
@@ -969,6 +1749,11 @@ body.sg-host {
   .sg-calib,
   .sg-guide {
     grid-template-columns: minmax(0, 1fr);
+  }
+  .sg-calib-action,
+  .sg-guide-action {
+    padding-left: 0;
+    border-left: 0;
   }
   .sg-issue {
     grid-template-columns: minmax(0, 1fr) auto;

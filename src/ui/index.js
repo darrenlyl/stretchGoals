@@ -13,7 +13,9 @@
  *   ui.setPaused(bool)       For the tray's "pause"/"resume". Updates the UI and runs the callbacks.
  *   ui.isPaused()            true while paused.
  *   ui.showScreen(name)      "welcome" | "calibrate" | "dashboard" | "stretch". Tray "recalibrate" can
- *                            use showScreen("calibrate").
+ *                            use showScreen("calibrate"). Going to "calibrate" stops a running stretch.
+ *   ui.onCameraChange(cb)    cb(on) runs when the camera turns on or off (the top-bar Camera button
+ *                            calls camera.stopCamera() / startCamera()). Returns an unsubscribe function.
  *
  * ─── Slots other tracks fill (made once in mount, never re-created) ─────────
  *   <video id="camera-video"> + <canvas id="camera-overlay">  Jordan: startCamera(video, canvas).
@@ -67,7 +69,11 @@ let screen = "welcome";
 let lastState = emptyPostureState();
 let paused = false;
 const pauseListeners = new Set();
-let settings = { voiceOn: true, sensitivity: DEFAULT_SENSITIVITY };
+let cameraLive = false; // true while camera frames are playing in the <video>
+let cameraStarting = false;
+const cameraListeners = new Set();
+let settings = { voiceOn: true, sensitivity: DEFAULT_SENSITIVITY, theme: "system" };
+const darkQuery = window.matchMedia?.("(prefers-color-scheme: dark)");
 
 // Calibration: idle → running → done | failed
 let calib = { phase: "idle", message: "" };
@@ -108,6 +114,12 @@ function setRing(barEl, fraction) {
   }
 }
 
+/** The number inside a ring. data-len lets ui.css shrink 3+ characters ("100", "57%") to fit. */
+function setRingValue(el, text) {
+  setText(el, text);
+  setData(el, "len", String(String(text ?? "").length));
+}
+
 /** Set a data-* attribute only when it changed (used for colours in ui.css). */
 function setData(el, key, value) {
   if (el.dataset[key] !== value) el.dataset[key] = value;
@@ -135,6 +147,7 @@ function loadSettings() {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
     if (typeof saved.voiceOn === "boolean") settings.voiceOn = saved.voiceOn;
     if (typeof saved.sensitivity === "number") settings.sensitivity = clamp01(saved.sensitivity);
+    if (THEMES.some((t) => t.id === saved.theme)) settings.theme = saved.theme;
   } catch {
     // localStorage can be unavailable; the defaults are fine
   }
@@ -191,16 +204,41 @@ function stretchFor(issueId) {
   return findStretch("shoulder_rolls");
 }
 
-// ─── Icons (outline, 16px) ──────────────────────────────────────────────────
+// ─── Icons (outline, drawn on a 24px grid) ──────────────────────────────────
 
+const svg = (body) => `<svg viewBox="0 0 24 24" aria-hidden="true" class="sg-icon">${body}</svg>`;
 const ICON = {
-  mark: `<svg class="sg-mark" viewBox="0 0 24 24" aria-hidden="true"><rect x="8.5" y="1.5" width="7" height="4.2" rx="2.1"/><rect x="7" y="7.2" width="10" height="4.2" rx="2.1"/><rect x="7" y="12.9" width="10" height="4.2" rx="2.1"/><rect x="8.5" y="18.6" width="7" height="3.9" rx="1.95"/></svg>`,
-  sliders: `<svg viewBox="0 0 24 24" aria-hidden="true" class="sg-icon"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg>`,
-  pause: `<svg viewBox="0 0 24 24" aria-hidden="true" class="sg-icon"><path d="M9 6v12M15 6v12"/></svg>`,
-  play: `<svg viewBox="0 0 24 24" aria-hidden="true" class="sg-icon"><path d="M8 5.5v13l10-6.5z"/></svg>`,
-  close: `<svg viewBox="0 0 24 24" aria-hidden="true" class="sg-icon"><path d="M6 6l12 12M18 6L6 18"/></svg>`,
-  lock: `<svg viewBox="0 0 24 24" aria-hidden="true" class="sg-icon"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>`,
+  mark: `<svg class="sg-mark" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="2" width="9" height="5" rx="2.5"/><rect x="7" y="9.5" width="10" height="5" rx="2.5" opacity=".7"/><rect x="4.5" y="17" width="11" height="5" rx="2.5" opacity=".45"/></svg>`,
+  sliders: svg(`<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>`),
+  pause: svg(`<path d="M9 6v12M15 6v12"/>`),
+  play: svg(`<path d="M8 5.5v13l10-6.5z"/>`),
+  close: svg(`<path d="M6 6l12 12M18 6L6 18"/>`),
+  lock: svg(`<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>`),
   check: `<svg viewBox="0 0 24 24" aria-hidden="true" class="sg-icon sg-icon-lg"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>`,
+  pulse: svg(`<path d="M3 12h4l2.5-6 4 12 2.5-6H21"/>`),
+  target: svg(`<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/>`),
+  stretch: svg(`<circle cx="12" cy="4.5" r="2"/><path d="M5 8.5l7 1.5 7-1.5M12 10v5l-3.5 6M12 15l3.5 6"/>`),
+  gear: svg(`<circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7"/>`),
+  sun: svg(`<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/>`),
+  moon: svg(`<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>`),
+  desktop: svg(`<rect x="3" y="4.5" width="18" height="12" rx="2"/><path d="M9 20.5h6M12 16.5v4"/>`),
+  camera: svg(`<rect x="2.5" y="6.5" width="13" height="11" rx="2.5"/><path d="M15.5 10.5l6-3.5v10l-6-3.5"/>`),
+  cameraOff: svg(`<path d="M3 3l18 18M8.5 6.5h4.5a2.5 2.5 0 0 1 2.5 2.5v2l6-3.5v10l-2.2-1.3M15.5 17.5h-10.5A2.5 2.5 0 0 1 2.5 15V9a2.5 2.5 0 0 1 1.9-2.4"/>`),
+};
+
+// Theme: "system" follows the computer's light/dark setting
+const THEMES = [
+  { id: "system", label: "System", icon: ICON.desktop },
+  { id: "light", label: "Light", icon: ICON.sun },
+  { id: "dark", label: "Dark", icon: ICON.moon },
+];
+
+// Title and one-line purpose shown in the top bar for each screen (welcome has its own hero)
+const SCREEN_TEXT = {
+  calibrate: ["Calibrate", "Sit tall for 3 seconds so we learn what good posture looks like for you."],
+  dashboard: ["Your posture", "Live from your camera. Maizy mirrors how you sit."],
+  stretch: ["Stretch break", "Move gently and stop if anything hurts."],
+  stretchPick: ["Stretches", "Pick one. Each takes about half a minute, and the coach talks you through it."],
 };
 
 function ring(ref, valueRef) {
@@ -217,17 +255,46 @@ function ring(ref, valueRef) {
 // ─── The screens, as HTML (built once in mount) ─────────────────────────────
 
 const TEMPLATE = `
-<div class="sg-app" data-screen="welcome">
+<div class="sg-app" data-screen="welcome" data-stretching="no">
+  <!-- Left rail: navigation and the Maizy dock (hidden on the welcome screen) -->
+  <nav class="sg-rail" data-ref="rail" aria-label="Main">
+    <div class="sg-brand">${ICON.mark}<span class="sg-brand-name">Stretch<span>Goals</span></span></div>
+    <div class="sg-rail-nav">
+      <button type="button" class="sg-nav" data-nav="dashboard" title="Dashboard">${ICON.pulse}<span class="sg-nav-label">Dashboard</span></button>
+      <button type="button" class="sg-nav" data-nav="calibrate" title="Calibrate">${ICON.target}<span class="sg-nav-label">Calibrate</span></button>
+      <button type="button" class="sg-nav" data-nav="stretch" title="Stretches">${ICON.stretch}<span class="sg-nav-label">Stretches</span><span class="sg-nav-live" data-ref="stretchLive" hidden>Live</span></button>
+      <div class="sg-rail-sep" role="separator"></div>
+      <button type="button" class="sg-nav" data-ref="settingsBtn" aria-haspopup="dialog" title="Settings">${ICON.gear}<span class="sg-nav-label">Settings</span></button>
+    </div>
+    <div class="sg-dock">
+      <div class="sg-dock-row">
+        <div class="sg-dock-maizy" id="maizy-mini"></div>
+        <div class="sg-dock-text">
+          <p class="sg-dock-score" data-ref="dockScore">–</p>
+          <p class="sg-dock-word" data-ref="dockWord">Camera off</p>
+        </div>
+      </div>
+      <button type="button" class="sg-btn sg-btn-primary sg-btn-sm" data-ref="dockStretch">Stretch now</button>
+    </div>
+  </nav>
+
+  <div class="sg-body">
   <header class="sg-header">
-    <div class="sg-brand">${ICON.mark}<span class="sg-brand-name">stretchGoals</span></div>
+    <div class="sg-brand sg-header-brand">${ICON.mark}<span class="sg-brand-name">Stretch<span>Goals</span></span></div>
+    <div class="sg-heading">
+      <h1 class="sg-screen-title" data-ref="screenTitle"></h1>
+      <p class="sg-screen-lede" data-ref="screenLede"></p>
+    </div>
     <div class="sg-header-tools" data-ref="headerTools">
-      <span class="sg-status" data-ref="status" data-tone="good"><span class="sg-status-dot"></span><span data-ref="statusText">Watching</span></span>
-      <button type="button" class="sg-btn sg-btn-quiet" data-ref="pauseBtn">
-        <span data-ref="pauseIcon">${ICON.pause}</span><span data-ref="pauseLabel">Pause</span>
+      <button type="button" class="sg-pill-status" data-ref="status" data-tone="good" title="Click to turn the camera off"><span class="sg-status-dot"></span><span data-ref="statusText">Watching</span></button>
+      <!-- Camera on/off: a real switch. The track on the right shows the state. -->
+      <button type="button" class="sg-btn sg-btn-tool" data-ref="cameraBtn" aria-pressed="false" title="Turn camera on">
+        <span data-ref="cameraBtnIcon">${ICON.cameraOff}</span><span class="sg-tool-label">Camera</span><span class="sg-tool-switch" aria-hidden="true"></span>
       </button>
-      <button type="button" class="sg-btn sg-btn-quiet" data-ref="settingsBtn" aria-haspopup="dialog">
-        ${ICON.sliders}<span>Settings</span>
+      <button type="button" class="sg-btn sg-btn-tool" data-ref="pauseBtn" title="Pause posture checks">
+        <span data-ref="pauseIcon">${ICON.pause}</span><span class="sg-tool-label" data-ref="pauseLabel">Pause</span>
       </button>
+      <button type="button" class="sg-btn sg-btn-icon" data-ref="themeBtn" aria-label="Switch theme" title="Switch theme"><span data-ref="themeIcon">${ICON.sun}</span></button>
     </div>
   </header>
 
@@ -264,7 +331,10 @@ const TEMPLATE = `
 
       <!-- Camera slot (Jordan). Never re-created. -->
       <figure class="sg-card sg-camera" aria-label="Your camera">
-        <div class="sg-camera-off" data-ref="cameraOff">Camera is off</div>
+        <div class="sg-camera-off" data-ref="cameraOff">
+          <span data-ref="cameraOffText">Camera is off</span>
+          <button type="button" class="sg-btn sg-btn-secondary sg-btn-sm" data-ref="cameraOffBtn" hidden>Turn camera on</button>
+        </div>
         <video id="camera-video" autoplay muted playsinline></video>
         <canvas id="camera-overlay"></canvas>
         <figcaption class="sg-chip" data-ref="cameraChip" hidden></figcaption>
@@ -292,7 +362,7 @@ const TEMPLATE = `
           <div class="sg-calib-action">
             <p class="sg-calib-message" data-ref="calibMessage" aria-live="polite">We'll remember this as your good posture.</p>
             <div class="sg-actions">
-              <button type="button" class="sg-btn sg-btn-primary" data-ref="calibBtn">Calibrate</button>
+              <button type="button" class="sg-btn sg-btn-primary" data-ref="calibBtn">Start calibration</button>
               <button type="button" class="sg-btn sg-btn-text" data-ref="skipBtn">Skip for now</button>
             </div>
           </div>
@@ -324,20 +394,38 @@ const TEMPLATE = `
           <p class="sg-tip-for" data-ref="tipFor"></p>
           <p class="sg-tip-how" data-ref="tipHow"></p>
           <div class="sg-tip-foot">
-            <button type="button" class="sg-btn sg-btn-primary" data-ref="tipStart">Start</button>
+            <button type="button" class="sg-btn sg-btn-primary" data-ref="tipStart">${ICON.play}Start stretch</button>
             <span class="sg-note" data-ref="tipTime"></span>
           </div>
         </section>
       </div>
 
-      <!-- 4. Guided stretch -->
+      <!-- 4. Stretches. No stretch running: pick one (sg-stretch-pick). Running: the guide (sg-stretch-live). -->
       <div class="sg-screen" data-for="stretch">
-        <section class="sg-card sg-side" aria-label="Time left in this step">
+        <section class="sg-card sg-pick-side sg-stretch-pick" aria-labelledby="sg-pick-title">
+          <p class="sg-label" data-ref="pickLabel">Suggested for you</p>
+          <h2 id="sg-pick-title" class="sg-h2" data-ref="pickName"></h2>
+          <p class="sg-tip-for" data-ref="pickFor"></p>
+          <p class="sg-tip-how" data-ref="pickHow"></p>
+          <div class="sg-tip-foot">
+            <button type="button" class="sg-btn sg-btn-primary" data-ref="pickStart">${ICON.play}Start stretch</button>
+            <span class="sg-note" data-ref="pickTime"></span>
+          </div>
+        </section>
+        <section class="sg-card sg-panel sg-picker sg-stretch-pick" aria-labelledby="sg-picker-title">
+          <div class="sg-card-head">
+            <h2 id="sg-picker-title" class="sg-h3">All stretches</h2>
+            <span class="sg-count">Click one to start it</span>
+          </div>
+          <ul class="sg-pick-list" data-ref="pickList"></ul>
+        </section>
+
+        <section class="sg-card sg-side sg-stretch-live" aria-label="Time left in this step">
           <p class="sg-label">This step</p>
           ${ring("stretchRing", "stretchValue")}
           <p class="sg-verdict" data-ref="stretchStepOf"></p>
         </section>
-        <section class="sg-card sg-panel sg-guide" aria-labelledby="sg-guide-title">
+        <section class="sg-card sg-panel sg-guide sg-stretch-live" aria-labelledby="sg-guide-title">
           <div class="sg-guide-text">
             <h2 id="sg-guide-title" class="sg-h2" data-ref="stretchName"></h2>
             <p class="sg-step-text" data-ref="stretchStep" aria-live="polite"></p>
@@ -356,6 +444,7 @@ const TEMPLATE = `
     <span><strong>Not medical advice.</strong> stretchGoals helps you notice your posture. It doesn't diagnose anything.</span>
     <span class="sg-footer-private">${ICON.lock} Video stays on this laptop</span>
   </footer>
+  </div>
 
   <!-- 5. Settings (a panel that slides over the screen) -->
   <div class="sg-scrim" data-ref="scrim" hidden></div>
@@ -363,6 +452,16 @@ const TEMPLATE = `
     <div class="sg-settings-head">
       <h2 id="sg-settings-title" class="sg-h2">Settings</h2>
       <button type="button" class="sg-btn sg-btn-icon" data-ref="settingsClose" aria-label="Close settings">${ICON.close}</button>
+    </div>
+
+    <div class="sg-setting">
+      <div class="sg-setting-row">
+        <span class="sg-setting-title" id="sg-theme-label">Appearance</span>
+      </div>
+      <div class="sg-segmented" role="radiogroup" aria-labelledby="sg-theme-label" data-ref="themeChoices">
+        ${THEMES.map((t) => `<button type="button" role="radio" class="sg-segment" data-theme-choice="${t.id}" aria-label="${t.label} theme">${t.icon}<span>${t.label}</span></button>`).join("")}
+      </div>
+      <p class="sg-setting-desc">System follows your computer's light or dark setting.</p>
     </div>
 
     <div class="sg-setting">
@@ -407,6 +506,8 @@ function showScreen(name) {
   if (!root || !SCREENS.includes(name)) return;
   screen = name;
   setData(root, "screen", name);
+  // You can't hold still for calibration in the middle of a stretch, so end it
+  if (name === "calibrate") stopRunningStretch();
   if (name === "calibrate" && calib.phase !== "running" && !lastState.calibrating) {
     calib = { phase: "idle", message: "" };
   }
@@ -425,18 +526,41 @@ function render() {
 function renderHeader() {
   const onWelcome = screen === "welcome";
   show(refs.headerTools, !onWelcome);
+
+  // Screen title and purpose. The stretch screen has two: picking one, or doing one.
+  const key = screen === "stretch" && !stretchRun ? "stretchPick" : screen;
+  const [title, lede] = SCREEN_TEXT[key] ?? ["", ""];
+  setText(refs.screenTitle, title);
+  setText(refs.screenLede, lede);
+  setData(root, "stretching", stretchRun ? "yes" : "no");
+
+  // Rail: highlight the current screen; "Live" on Stretches while one runs somewhere else
+  for (const button of refs.navButtons) {
+    const current = button.dataset.nav === screen;
+    if (current) button.setAttribute("aria-current", "page");
+    else button.removeAttribute("aria-current");
+  }
+  show(refs.stretchLive, stretchRun !== null && screen !== "stretch");
+
+  renderCameraButton();
+  renderDock(lastState);
+
   let text = "Watching";
   let tone = "good";
   if (paused) [text, tone] = ["Paused", "off"];
+  else if (dashboardMode(lastState) === "cameraOff") [text, tone] = ["Not watching", "off"];
   else if (screen === "calibrate" && (calib.phase === "running" || lastState.calibrating)) text = "Calibrating";
-  else if (screen === "stretch") text = "Stretching";
+  else if (screen === "stretch" && stretchRun) text = "Stretching";
   setText(refs.statusText, text);
   setData(refs.status, "tone", tone);
+  refs.status.title = cameraLive ? "Click to turn the camera off" : "Click to turn the camera on";
+  refs.status.disabled = cameraStarting || !services.camera?.startCamera;
   // Pause button: icon + label
   const label = paused ? "Resume" : "Pause";
   if (refs.pauseLabel.textContent !== label) {
     refs.pauseLabel.textContent = label;
     refs.pauseIcon.innerHTML = paused ? ICON.play : ICON.pause;
+    refs.pauseBtn.title = paused ? "Start posture checks again" : "Pause posture checks";
     refs.settingsPause.textContent = label;
     refs.settingsPauseDesc.textContent = paused
       ? "Paused. Posture checks are off until you resume."
@@ -444,12 +568,97 @@ function renderHeader() {
   }
 }
 
+/** The top-bar Camera switch: on (mint track), off, or starting. */
+function renderCameraButton() {
+  const state = cameraStarting ? "starting" : cameraLive ? "on" : "off";
+  if (refs.cameraBtn.dataset.state === state) return;
+  refs.cameraBtn.dataset.state = state;
+  refs.cameraBtn.setAttribute("aria-pressed", String(cameraLive));
+  refs.cameraBtn.disabled = cameraStarting || !services.camera?.startCamera;
+  refs.cameraBtn.title = cameraStarting ? "Turning the camera on…" : cameraLive ? "Turn camera off" : "Turn camera on";
+  refs.cameraBtnIcon.innerHTML = cameraLive ? ICON.camera : ICON.cameraOff;
+  // The big "Camera is off" area gets its own button too
+  show(refs.cameraOffBtn, Boolean(services.camera?.startCamera));
+  refs.cameraOffBtn.disabled = cameraStarting;
+  setText(refs.cameraOffBtn, cameraStarting ? "Turning on…" : "Turn camera on");
+}
+
+/** The Maizy dock at the bottom of the rail: live score and one word about it. */
+function renderDock(state) {
+  const mode = dashboardMode(state);
+  const live = mode === "live";
+  const score = live ? Math.round(state.score) : null;
+  setText(refs.dockScore, score ?? "–");
+  setData(refs.dockScore, "tone", live ? scoreTone(score) : "none");
+  const words = { cameraOff: "Camera off", paused: "Paused", absent: "We can't see you", uncalibrated: "Not calibrated", unreadable: "Can't read you" };
+  setText(refs.dockWord, live ? (score >= SCORE_GOOD ? "Sitting well" : score >= SCORE_OK ? "A little off" : "Slouching") : words[mode]);
+  // While a stretch runs, the dock button takes you back to it
+  const watchingIt = stretchRun !== null && screen === "stretch";
+  refs.dockStretch.disabled = watchingIt;
+  setText(refs.dockStretch, watchingIt ? "Stretching…" : stretchRun ? "Back to stretch" : "Stretch now");
+}
+
+// ─── Theme ──────────────────────────────────────────────────────────────────
+
+/** Resolve "system" to light or dark and paint it. The page behind the app follows too. */
+function applyTheme() {
+  const resolved = settings.theme === "system" ? (darkQuery?.matches ? "dark" : "light") : settings.theme;
+  setData(root, "theme", resolved);
+  document.documentElement.dataset.sgTheme = resolved;
+  for (const button of refs.themeChoices.querySelectorAll("[data-theme-choice]")) {
+    button.setAttribute("aria-checked", String(button.dataset.themeChoice === settings.theme));
+  }
+  // The top-bar button shows what a click switches to
+  refs.themeIcon.innerHTML = resolved === "dark" ? ICON.sun : ICON.moon;
+  refs.themeBtn.setAttribute("aria-label", resolved === "dark" ? "Switch to light theme" : "Switch to dark theme");
+  refs.themeBtn.title = refs.themeBtn.getAttribute("aria-label");
+}
+
+function setTheme(theme) {
+  settings.theme = theme;
+  saveSettings();
+  applyTheme();
+}
+
 function renderCamera(state) {
   let chip = "";
   if (paused) chip = "Paused";
-  else if (refs.cameraOff.hidden && !state.present) chip = "We can't see you";
+  else if (cameraLive && !state.present) chip = "We can't see you";
   setText(refs.cameraChip, chip);
   show(refs.cameraChip, chip !== "");
+}
+
+/** The camera started or stopped (whoever did it): tell app.js, redraw. */
+function setCameraLive(on) {
+  show(refs.cameraOff, !on);
+  if (on === cameraLive) return;
+  cameraLive = on;
+  cameraListeners.forEach((cb) => safeCall(cb, on));
+  render();
+}
+
+/** Top-bar Camera switch and the "Turn camera on" button in the camera card. */
+async function onCameraClick() {
+  const camera = services.camera;
+  if (cameraStarting || !camera?.startCamera) return;
+  if (cameraLive) {
+    safeCall(camera.stopCamera); // camera light goes off; the <video> empties
+    setCameraLive(false);
+    return;
+  }
+  cameraStarting = true;
+  setText(refs.cameraOffText, "Turning the camera on…");
+  render();
+  try {
+    await camera.startCamera(refs.video, refs.canvas);
+    setText(refs.cameraOffText, "Camera is off");
+  } catch (err) {
+    console.error("[ui] startCamera failed:", err);
+    setText(refs.cameraOffText, cameraErrorMessage(err));
+  } finally {
+    cameraStarting = false;
+    render();
+  }
 }
 
 // ─── 1. Welcome: start the camera ───────────────────────────────────────────
@@ -558,7 +767,7 @@ function renderCalibration(state) {
   let message = "We'll remember this as your good posture.";
   let tone = "none";
   let fraction = 0;
-  let button = "Calibrate";
+  let button = "Start calibration";
 
   if (running) {
     fraction = state.calibrationProgress;
@@ -583,7 +792,7 @@ function renderCalibration(state) {
 
   setRing(refs.calibRingBar, fraction);
   setData(refs.calibRing, "tone", tone);
-  setText(refs.calibValue, value);
+  setRingValue(refs.calibValue, value);
   setData(refs.calibValue, "icon", calib.phase === "done" && !running ? "check" : "");
   setText(refs.calibVerdict, verdict);
   setText(refs.calibMessage, message);
@@ -596,6 +805,8 @@ function renderCalibration(state) {
 
 /** Which situation are we in? Decides the score, the messages and the empty states. */
 function dashboardMode(state) {
+  // (fake posture in dev can be "present" with no camera, so it stays live)
+  if (!cameraLive && !state.present && services.camera?.startCamera) return "cameraOff";
   if (paused) return "paused";
   if (!state.present) return "absent";
   if (!state.calibrated) return "uncalibrated";
@@ -604,6 +815,7 @@ function dashboardMode(state) {
 }
 
 const MODE_TEXT = {
+  cameraOff: ["Camera is off", "Turn it on to keep watching.", "Your camera is off, so we aren't checking your posture. Turn it back on whenever you're ready."],
   paused: ["Paused", "Resume to keep watching.", "Paused. Resume when you want us to keep an eye on your posture."],
   absent: ["We can't see you", "Move into the camera's view.", "We can't see you right now. Sit where the camera can see your head and both shoulders."],
   uncalibrated: ["Not calibrated yet", "Calibrate to get a score.", "Calibrate first, so we know what your good posture looks like."],
@@ -614,19 +826,19 @@ function renderDashboard(state) {
   const mode = dashboardMode(state);
   const issues = mode === "live" ? (state.issues ?? []).filter((i) => ISSUES[i.id]) : [];
   // Worst issue = highest severity (posture sorts worst first, but this is cheap insurance)
-  const worst = issues.reduce((a, b) => (b.severity > (a?.severity ?? -1) ? b : a), null);
+  const worst = worstIssue(state);
 
   // Score ring
   if (mode === "live") {
     const score = Math.round(state.score);
     const tone = scoreTone(score);
-    setText(refs.scoreValue, score);
+    setRingValue(refs.scoreValue, score);
     setData(refs.scoreRing, "tone", tone);
     setRing(refs.scoreRingBar, score / 100);
     setText(refs.verdict, tone === "good" ? "Looking good" : tone === "ok" ? "A little off" : "Time to reset");
     setText(refs.subVerdict, worst ? (worst.layman ?? ISSUES[worst.id].layman) : "Right where you calibrated.");
   } else {
-    setText(refs.scoreValue, "–");
+    setRingValue(refs.scoreValue, "–");
     setData(refs.scoreRing, "tone", "none");
     setRing(refs.scoreRingBar, 0);
     setText(refs.verdict, MODE_TEXT[mode][0]);
@@ -666,6 +878,7 @@ function makeIssueRow(id) {
   row.title.textContent = info.medical ?? info.layman;
   row.plain.textContent = info.medical ? info.layman : "";
   row.plain.hidden = !info.medical;
+  li.title = info.medical ? `${info.medical}: ${info.layman}` : info.layman; // full name if it's cut short
   return row;
 }
 
@@ -682,7 +895,8 @@ function renderIssues(mode, issues, severities) {
   show(refs.issuesEmpty, !live);
   show(refs.issueList, live);
   if (!live) {
-    const action = mode === "uncalibrated" ? "Calibrate" : mode === "paused" ? "Resume" : "";
+    // (camera off: the camera card right above has the "Turn camera on" button)
+    const action = { uncalibrated: "Calibrate now", paused: "Resume" }[mode] ?? "";
     setText(refs.issuesEmptyText, MODE_TEXT[mode][2]);
     setText(refs.issuesAction, action);
     show(refs.issuesAction, action !== "");
@@ -715,6 +929,7 @@ function renderIssues(mode, issues, severities) {
   }
 }
 
+/** The suggested stretch, shown on the dashboard card and at the top of the stretch picker. */
 function renderTip(worstIssue) {
   const issueId = worstIssue?.id ?? null;
   const key = issueId ?? "none";
@@ -722,18 +937,61 @@ function renderTip(worstIssue) {
   const stretch = stretchFor(issueId);
   suggested = { key, stretch };
 
-  setText(refs.tipLabel, issueId ? "Suggested stretch" : "Quick reset");
-  setText(refs.tipName, stretchName(stretch));
-  setText(refs.tipFor, issueId ? `For: ${ISSUES[issueId].layman.toLowerCase()}` : "Good any time you've been sitting a while.");
-  setText(refs.tipHow, stretchHow(stretch));
   const seconds = stretchSeconds(stretch);
-  setText(refs.tipTime, seconds ? `About ${seconds} s` : "");
+  const forText = issueId ? `For: ${ISSUES[issueId].layman.toLowerCase()}` : "Good any time you've been sitting a while.";
+  for (const [label, name, forEl, how, time, labelText] of [
+    [refs.tipLabel, refs.tipName, refs.tipFor, refs.tipHow, refs.tipTime, issueId ? "Suggested stretch" : "Quick reset"],
+    [refs.pickLabel, refs.pickName, refs.pickFor, refs.pickHow, refs.pickTime, issueId ? "Suggested for you" : "Quick reset"],
+  ]) {
+    setText(label, labelText);
+    setText(name, stretchName(stretch));
+    setText(forEl, forText);
+    setData(forEl, "chip", issueId ? "yes" : "no");
+    setText(how, stretchHow(stretch));
+    setText(time, seconds ? `About ${seconds} s` : "");
+  }
+  // Mark it in the picker's list too
+  for (const button of refs.pickList.querySelectorAll(".sg-pick")) {
+    setData(button, "suggested", button.dataset.stretchId === stretch.id ? "yes" : "no");
+  }
+  fitTipText(refs.tipHow);
+  fitTipText(refs.pickHow);
+}
+
+/** A suggested-stretch description shows as many whole lines as fit its card (up to 4), or none. */
+function fitTipText(howEl) {
+  const card = howEl.closest(".sg-card");
+  if (!card.offsetParent) return; // not on screen; the ResizeObserver runs this when it shows
+  howEl.hidden = false;
+  howEl.style.webkitLineClamp = "4";
+  const over = card.scrollHeight - card.clientHeight;
+  if (over <= 0) return;
+  const lineHeight = parseFloat(getComputedStyle(howEl).lineHeight) || 21;
+  const lines = Math.round(howEl.offsetHeight / lineHeight) - Math.ceil(over / lineHeight);
+  if (lines > 0) howEl.style.webkitLineClamp = String(lines);
+  else howEl.hidden = true;
+}
+
+/** The worst issue right now, or null (also null when not live). */
+function worstIssue(state) {
+  if (dashboardMode(state) !== "live") return null;
+  const issues = (state.issues ?? []).filter((i) => ISSUES[i.id]);
+  return issues.reduce((a, b) => (b.severity > (a?.severity ?? -1) ? b : a), null);
+}
+
+function renderPicker() {
+  renderTip(worstIssue(lastState));
 }
 
 // ─── 4. Guided stretch ──────────────────────────────────────────────────────
 
+/** Start the suggested stretch (dashboard card, dock, picker's big button). */
 function onStartStretchClick() {
-  const stretch = suggested?.stretch;
+  if (!suggested) renderTip(null); // e.g. "Stretch now" before the dashboard has picked one
+  startStretch(suggested?.stretch);
+}
+
+function startStretch(stretch) {
   if (!stretch?.id) return;
   const firstSeconds = Number(stretch.steps?.[0]?.seconds) || 0;
   stretchRun = { id: stretch.id, stretch, stepIndex: 0, secondsLeft: firstSeconds, stepTotal: firstSeconds };
@@ -741,10 +999,22 @@ function onStartStretchClick() {
   safeCall(stretches?.startStretch, stretch.id);
 }
 
-function onStopStretchClick() {
+/** Dock button: start one, or go back to the one that's running. */
+function onDockStretchClick() {
+  if (stretchRun) showScreen("stretch");
+  else onStartStretchClick();
+}
+
+function stopRunningStretch() {
+  if (!stretchRun) return;
   stretchRun = null;
-  safeCall(stretches?.stopStretch);
+  safeCall(stretches?.stopStretch); // sends "end"
+}
+
+function onStopStretchClick() {
   showScreen("dashboard");
+  stopRunningStretch();
+  render();
 }
 
 /** Joseph's stretch events: { type: "start" | "step" | "tick" | "end", stretchId, stepIndex, secondsLeft } */
@@ -753,6 +1023,7 @@ function onStretchEvent(event) {
   if (event.type === "end") {
     stretchRun = null;
     if (screen === "stretch") showScreen("dashboard");
+    else render();
     return;
   }
   if (!stretchRun || stretchRun.id !== event.stretchId) {
@@ -769,12 +1040,44 @@ function onStretchEvent(event) {
   stretchRun.secondsLeft = secondsLeft;
   stretchRun.stepTotal = Math.max(stretchRun.stepTotal, secondsLeft);
 
-  if (screen !== "stretch") showScreen("stretch");
-  else renderStretch();
+  // Only a new stretch (e.g. started by voice) opens the screen. Ticks never pull you back
+  // to it, so you can look at the dashboard or calibrate while one runs.
+  if (event.type === "start" && screen !== "stretch") showScreen("stretch");
+  else if (screen === "stretch") renderStretch();
+  else renderHeader();
+}
+
+/** The picker's list: one button per stretch, made once in mount. */
+function buildPickList() {
+  const list = allStretches().length ? allStretches() : FALLBACK_STRETCHES;
+  refs.pickList.innerHTML = "";
+  for (const stretch of list) {
+    // "Hunched over, one shoulder higher than the other"
+    const helps = (stretch.helps ?? []).map((id) => ISSUES[id]?.layman).filter(Boolean);
+    const helpsText = helps.map((text, i) => (i ? text.charAt(0).toLowerCase() + text.slice(1) : text)).join(", ");
+    const seconds = stretchSeconds(stretch);
+    const li = document.createElement("li");
+    li.innerHTML = `
+      <button type="button" class="sg-pick" data-stretch-id="${stretch.id}">
+        <span class="sg-pick-text">
+          <span class="sg-pick-name"></span>
+          <span class="sg-pick-meta"></span>
+        </span>
+        <span class="sg-pick-go">${ICON.play}</span>
+      </button>`;
+    li.querySelector(".sg-pick-name").textContent = stretchName(stretch);
+    // Time first, so it's never the part cut short: "35 s · Neck too far forward"
+    li.querySelector(".sg-pick-meta").textContent = [seconds ? `${seconds} s` : "", helpsText || "Any time"].filter(Boolean).join(" · ");
+    li.querySelector(".sg-pick").title = helpsText ? `Start ${stretchName(stretch)}. Helps: ${helpsText.toLowerCase()}` : `Start ${stretchName(stretch)}`;
+    refs.pickList.appendChild(li);
+  }
 }
 
 function renderStretch() {
-  if (!stretchRun) return;
+  if (!stretchRun) {
+    renderPicker();
+    return;
+  }
   const { stretch, stepIndex, secondsLeft, stepTotal } = stretchRun;
   const steps = Array.isArray(stretch.steps) ? stretch.steps : [];
   setText(refs.stretchName, stretchName(stretch));
@@ -782,7 +1085,7 @@ function renderStretch() {
   const next = stepText(steps[stepIndex + 1]);
   setText(refs.stretchNext, steps.length ? (next ? `Up next: ${next}` : "Last step. Nearly done.") : "");
   setText(refs.stretchStepOf, steps.length ? `Step ${stepIndex + 1} of ${steps.length}` : "");
-  setText(refs.stretchValue, secondsLeft ? `${secondsLeft}` : "");
+  setRingValue(refs.stretchValue, secondsLeft ? `${secondsLeft}` : "");
   setData(refs.stretchRing, "tone", "accent");
   setRing(refs.stretchRingBar, stepTotal ? secondsLeft / stepTotal : 0);
 }
@@ -798,6 +1101,7 @@ function openSettings() {
   // `inert` stops Tab from wandering behind the panel
   refs.main.inert = true;
   refs.headerTools.inert = true;
+  refs.rail.inert = true;
   refs.settingsClose.focus();
 }
 
@@ -807,6 +1111,7 @@ function closeSettings() {
   show(refs.settings, false);
   refs.main.inert = false;
   refs.headerTools.inert = false;
+  refs.rail.inert = false;
   lastFocus?.focus?.();
 }
 
@@ -850,6 +1155,13 @@ function addStylesheet() {
   link.href = new URL("./ui.css", import.meta.url).href;
   link.dataset.sgUi = "";
   document.head.appendChild(link);
+
+  // Display face for titles and big numbers: Unbounded (OFL-1.1, see fonts/OFL.txt), bundled so it
+  // works offline. new URL(...) lets Vite copy it into the packaged app.
+  const fontUrl = new URL("./fonts/unbounded.woff2", import.meta.url).href;
+  const face = new FontFace("Unbounded", `url("${fontUrl}") format("woff2")`, { weight: "200 900", display: "swap" });
+  document.fonts.add(face);
+  face.load().catch(() => {}); // if it fails, the system font is used instead
 }
 
 function mount(el, givenServices = {}) {
@@ -870,6 +1182,7 @@ function mount(el, givenServices = {}) {
   root.querySelectorAll("[data-ref]").forEach((node) => (refs[node.dataset.ref] = node));
   refs.video = root.querySelector("#camera-video");
   refs.canvas = root.querySelector("#camera-overlay");
+  refs.navButtons = [...root.querySelectorAll("[data-nav]")];
 
   // Issue rows: made once, shown/hidden by update()
   for (const id of ISSUE_IDS) {
@@ -878,17 +1191,22 @@ function mount(el, givenServices = {}) {
   }
 
   // "Camera is off" sits behind the video until frames arrive
-  refs.video.addEventListener("playing", () => {
-    show(refs.cameraOff, false);
-    renderCamera(lastState);
-  });
-  refs.video.addEventListener("emptied", () => show(refs.cameraOff, true));
+  refs.video.addEventListener("playing", () => setCameraLive(true));
+  refs.video.addEventListener("emptied", () => setCameraLive(false));
 
   // Buttons
   refs.startBtn.addEventListener("click", onStartClick);
+  refs.cameraBtn.addEventListener("click", onCameraClick);
+  refs.status.addEventListener("click", onCameraClick); // the status pill toggles the camera too
+  refs.cameraOffBtn.addEventListener("click", onCameraClick);
   refs.calibBtn.addEventListener("click", onCalibrateClick);
   refs.skipBtn.addEventListener("click", () => showScreen("dashboard"));
   refs.tipStart.addEventListener("click", onStartStretchClick);
+  refs.pickStart.addEventListener("click", onStartStretchClick);
+  refs.pickList.addEventListener("click", (e) => {
+    const pick = e.target.closest(".sg-pick");
+    if (pick) startStretch(findStretch(pick.dataset.stretchId));
+  });
   refs.stopBtn.addEventListener("click", onStopStretchClick);
   refs.issuesAction.addEventListener("click", () => {
     if (paused) setPaused(false);
@@ -903,6 +1221,22 @@ function mount(el, givenServices = {}) {
     if (e.key === "Escape") closeSettings();
   });
   refs.recalibrateBtn.addEventListener("click", onRecalibrateClick);
+
+  // Rail: each item just opens its screen (Stretches shows the picker, or the running stretch)
+  for (const button of refs.navButtons) {
+    button.addEventListener("click", () => showScreen(button.dataset.nav));
+  }
+  refs.dockStretch.addEventListener("click", onDockStretchClick);
+
+  // Theme: the top-bar button flips light/dark; Settings also offers "System"
+  refs.themeBtn.addEventListener("click", () => setTheme(root.dataset.theme === "dark" ? "light" : "dark"));
+  refs.themeChoices.addEventListener("click", (e) => {
+    const choice = e.target.closest("[data-theme-choice]");
+    if (choice) setTheme(choice.dataset.themeChoice);
+  });
+  darkQuery?.addEventListener?.("change", () => {
+    if (settings.theme === "system") applyTheme();
+  });
   refs.voiceToggle.addEventListener("change", () => {
     settings.voiceOn = refs.voiceToggle.checked;
     saveSettings();
@@ -916,9 +1250,18 @@ function mount(el, givenServices = {}) {
 
   // Stretch events (Joseph's module, or the fallback)
   safeCall(stretches.onStretchEvent, onStretchEvent);
+  buildPickList();
+  // Refit the suggested-stretch text whenever its card changes size (window resize, screen change)
+  const tipObserver = new ResizeObserver(() => {
+    fitTipText(refs.tipHow);
+    fitTipText(refs.pickHow);
+  });
+  tipObserver.observe(refs.tipHow.closest(".sg-card"));
+  tipObserver.observe(refs.pickHow.closest(".sg-card"));
 
   // Saved settings → apply them to the modules now
   loadSettings();
+  applyTheme();
   applyVoice();
   applySensitivity();
 
@@ -962,4 +1305,8 @@ export const ui = {
   setPaused,
   isPaused: () => paused,
   showScreen,
+  onCameraChange(cb) {
+    cameraListeners.add(cb);
+    return () => cameraListeners.delete(cb);
+  },
 };

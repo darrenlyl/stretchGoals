@@ -8,7 +8,8 @@ import * as posture from './posture/index.js';
 import * as voice from './voice/index.js';
 import * as stretches from './stretches/index.js';
 import { ui } from './ui/index.js';
-import { maizy } from './maizy/index.js';
+import { emptyPostureState } from './shared/contracts.js';
+import { maizy, createMaizy } from './maizy/index.js';
 import { postureNotifier } from './notifications.js';
 import { createMaizyAgent } from './voice/agent/maizy-agent.js';
 import { createAppControls } from './voice/agent/app-controls.js';
@@ -96,11 +97,16 @@ const voiceForUi = {
 // The UI builds every screen, including the camera and Maizy's slot. Its Start button calls camera.startCamera().
 ui.mount(document.querySelector('#app'), { camera, posture, voice: voiceForUi, stretches });
 maizy.mount(document.querySelector('#maizy'));
+// A small Maizy (head and shoulders) in the rail's dock, next to the live score
+const miniMaizy = createMaizy();
+const dockSpot = document.querySelector('#maizy-mini');
+if (dockSpot) miniMaizy.mount(dockSpot);
 
 // Every PostureState goes to everyone who reacts to posture.
 function handleState(state) {
   ui.update(state);
   maizy.update(state);
+  miniMaizy.update(state);
   voice.voiceCoach.update(state);
   postureNotifier.update(state);
   agent.update(state);
@@ -111,6 +117,12 @@ function handleState(state) {
 camera.onPoseFrame((frame) => {
   if (paused || useFake) return;
   handleState(worstFirst(posture.analyze(frame)));
+});
+
+// Camera turned off (the top-bar Camera switch): no more frames, so clear the last posture.
+// Maizy, the tray and the coach then show "nobody there" instead of a frozen score.
+ui.onCameraChange((on) => {
+  if (!on && !useFake) handleState(emptyPostureState(Date.now()));
 });
 
 // Pause: from the UI's button or the tray. Stops judging frames, alerts, the "Hey Maizy" mic and any call.
@@ -135,9 +147,10 @@ function worstFirst(state) {
   return { ...state, issues: [...state.issues].sort((a, b) => b.severity - a.severity) };
 }
 
-// Dev only: a fake posture panel under the app, for testing without a camera.
-// Tick "Use fake posture" and the panel drives the UI, Maizy, voice, notifications and tray.
-if (import.meta.env.DEV && window.api) {
+// Debug only (STRETCHGOALS_DEBUG=1 npm start): a fake posture panel under the app, for testing
+// without a camera. Tick "Use fake posture" and it drives the UI, Maizy, voice, notifications and tray.
+const debugMode = import.meta.env.DEV && new URLSearchParams(location.search).has('debug');
+if (debugMode && window.api) {
   import('./debug/fake-posture.js').then(({ mountFakePosturePanel }) => {
     const debugPanel = document.querySelector('#debug-panel');
     const toggle = document.createElement('label');
