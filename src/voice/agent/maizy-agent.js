@@ -46,7 +46,7 @@ export const GOODBYE_PATTERN =
   /\b(bye|goodbye|good bye|bye-bye|see (you|ya)|talk (to you )?later|that'?s all|i'?m done|that'?ll be all|good ?night)\b/i;
 
 // What she says first when they called her ("Hey Maizy" or Talk). Spoken straight away.
-const GREETINGS = ["Hey!", "Yes?", "What's up?", "I'm here."];
+const GREETINGS = ["Hey! What's up?", "Hi! What can I do for you?", "Hey there, I'm listening.", "Hi! How can I help?"];
 
 // The daily cap survives restarts when localStorage works, and lives in memory when it doesn't.
 const WAKES_KEY = "maizy.autoWakes";
