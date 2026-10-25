@@ -8,6 +8,7 @@ import { notify } from './voice/index.js';
 
 const SAME_ISSUE_MS = 10_000; // wait 10 seconds before notifying about the same issue again
 const ANY_NOTIFY_MS = 60_000; // and at least 60 seconds between any two notifications
+const STILL_BAD = 0.3; // severity where posture switches an issue on
 
 // One short fix per issue, shown under the issue name
 const TIPS = {
@@ -30,7 +31,8 @@ function lookingAway() {
 
 // Call with every PostureState (~10 times a second).
 function update(state, now = Date.now()) {
-  const issues = state?.issues ?? [];
+  // Skip issues that are fading out (posture keeps them on briefly so they don't flicker)
+  const issues = (state?.issues ?? []).filter((issue) => issue.severity >= STILL_BAD);
   const sustained = issues.filter((issue) => issue.sustained);
   const sustainedNow = new Set(sustained.map((issue) => issue.id));
   const away = lookingAway();

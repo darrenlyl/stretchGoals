@@ -21,6 +21,7 @@ const BREATH_S = 4.2;
 const SWAY_S = 6.8;
 const CELEBRATE_MS = 2000;
 const SCORE_GOOD = 80;
+const STILL_BAD = 0.3; // severity where posture switches an issue on
 const MINI_PX = 96; // at or below this width, show just her head and shoulders
 
 // Sparkle spots around her head and shoulders, in frame pixels; r is half the size.
@@ -128,7 +129,9 @@ export function createMaizy() {
     // 0.6 when there's no live score (camera off, nobody there, not calibrated)
     target.p = !present || state.score === null ? 0.6 : clamp01(state.score / 100);
 
-    const issues = state.issues ?? [];
+    // Only issues that are still bad count. Posture keeps a fixed issue switched on for a couple of
+    // seconds (so it doesn't flicker); without this, she'd glow red while the score is already 95+.
+    const issues = (state.issues ?? []).filter((issue) => issue.severity >= STILL_BAD);
     const sustained = issues.filter((issue) => issue.sustained).map((issue) => issue.id);
     const tall = present && state.score !== null && state.score >= SCORE_GOOD && issues.length === 0;
 
