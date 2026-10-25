@@ -1,24 +1,63 @@
+/* Page-level styles only. The UI brings its own (src/ui/ui.css). */
 body {
+  margin: 0;
   font-family:
     -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial,
     sans-serif;
-  margin: auto;
-  max-width: 38rem;
-  padding: 2rem;
 }
 
-/* Mirror the video. Only the picture flips, not the data. */
-#camera-video {
-  transform: scaleX(-1);
+/* Maizy call chip, bottom right. The dot shows when the mic is in use. */
+#maizy-call:not(:empty) {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100vw - 32px);
+  padding: 6px 6px 6px 14px;
+  border-radius: 999px;
+  background: #1f201d;
+  color: #fff;
+  font-size: 14px;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.18);
+}
+#maizy-call span::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 8px;
+  border-radius: 50%;
+  background: #8a8a85;
+  vertical-align: 1px;
+}
+#maizy-call[data-state='listening'] span::before {
+  background: #8bdc85;
+}
+#maizy-call[data-state='talking'] span::before,
+#maizy-call[data-state='connecting'] span::before {
+  background: #f2b84b;
+}
+#maizy-call[data-state='error'] span::before {
+  background: #e5484d;
+}
+#maizy-call button {
+  font: inherit;
+  padding: 4px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.14);
+  color: inherit;
+  cursor: pointer;
+}
+#maizy-call button:hover {
+  background: rgb(255 255 255 / 0.24);
 }
 
-/* Maizy's spot. No background, so she works on light and dark pages. */
-#maizy {
-  width: 240px;
-  height: 300px;
-}
-
-#camera-error {
-  color: #b00020;
-  font-weight: 600;
+/* Dev only: keeps the fake posture panel out of the way of the UI. */
+#debug-panel:not(:empty) {
+  padding: 1rem;
+  border-top: 1px dashed #ccc;
 }

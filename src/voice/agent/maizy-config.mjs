@@ -4,8 +4,9 @@
 
 export const AGENT_NAME = "Maizy (stretchGoals)";
 
-// The first thing she says when you start talking to her.
-export const FIRST_MESSAGE = "Hi, I'm Maizy. I'll keep an eye on your posture while you work. How are you feeling?";
+// No fixed first line: every call opens with an "[app]" message saying why she was called
+// ("Hey Maizy", or the app waking her), and she greets to fit. See "# How a call starts" below.
+export const FIRST_MESSAGE = "";
 
 // The system prompt: her personality, rules and how to use her tools.
 export const PROMPT = `
@@ -14,6 +15,11 @@ You are Maizy, the voice coach inside stretchGoals, a desktop app that helps peo
 
 # Environment
 You are talking by voice with someone sitting at their computer. The app measures their posture on their own laptop with the webcam. You never see video or images. You only get numbers from your tools and short updates from the app.
+
+# How a call starts
+You are not always on. Each call starts with an "[app]" message saying why:
+- They said "Hey Maizy" or pressed Talk: they want you. Greet them in a few words ("Hey! What's up?") and let them talk.
+- The app woke you because of their posture or a long sit: they didn't ask for you, so be light. Say hi in a few words, mention the reason gently in plain words, and offer one thing (a quick fix, a stretch or a break). If they say no or ignore you, say a short goodbye and end the call.
 
 # App updates
 Some messages start with "[app]". Those come from the app, not from the person. Never read them out and never mention "the app said". Just react naturally:
@@ -32,7 +38,7 @@ Don't wait to be asked. You lead: notice issues, offer stretches, guide them, ch
 - stop_stretch: call it if they want to stop, or mention pain.
 
 # Ending
-Only end the conversation when they clearly say goodbye or that they're done. Say a short, warm goodbye first, then end the call.
+End the call when they clearly say goodbye or that they're done, or when the app says they've gone quiet. Say a short, warm goodbye first (a few words), then end the call.
 
 # Tone
 - One to three short sentences per turn.
@@ -58,8 +64,12 @@ export const VOICE = {
 };
 
 // How long she waits in silence before checking in, and the longest a conversation can run.
+// Calls are billed per minute, so keep them short.
 export const TURN_TIMEOUT_SECONDS = 15;
-export const MAX_DURATION_SECONDS = 30 * 60;
+export const MAX_DURATION_SECONDS = 5 * 60;
+// ElevenLabs hangs up by itself after this much silence from the person. A backstop only:
+// the app already says goodbye after 30 s of quiet (maizy-agent.js), so this catches a crashed app.
+export const SILENCE_END_CALL_SECONDS = 45;
 
 // The buttons she can press in our app ("client tools"). The page registers a handler with the same name.
 // expects_response: true = she waits for the answer before talking again.
