@@ -1029,7 +1029,7 @@ body.sg-host {
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
 }
 .sg-issues-main {
@@ -1202,82 +1202,6 @@ body.sg-host {
   font-weight: 650;
 }
 
-/* Body chart beside the findings */
-.sg-figure-slot {
-  display: flex;
-  align-items: center;
-  padding: 6px 0;
-}
-.sg-figure {
-  height: 100%;
-  max-height: 300px;
-  aspect-ratio: 150 / 156;
-}
-.sg-figure-svg {
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-}
-.sg-figure-svg rect {
-  fill: var(--sg-sheet-2);
-  stroke: var(--sg-ink-2);
-  stroke-width: 0.9;
-}
-.sg-fig-head {
-  fill: var(--sg-sheet);
-  stroke: var(--sg-ink);
-  stroke-width: 1.4;
-}
-.sg-fig-bone,
-.sg-fig-shoulders,
-.sg-fig-eye,
-.sg-fig-level {
-  stroke: var(--sg-ink);
-  stroke-width: 1.4;
-  stroke-linecap: round;
-}
-.sg-fig-faint,
-.sg-fig-level {
-  stroke: var(--sg-rule-strong);
-  stroke-dasharray: 2 3;
-  stroke-width: 1;
-}
-.sg-fig-shoulders {
-  stroke-width: 2.4;
-}
-.sg-fig-joint {
-  fill: var(--sg-ink);
-}
-.sg-fig-floor {
-  stroke: var(--sg-rule-strong);
-  stroke-width: 1;
-}
-.sg-figure-svg .sg-fig-screen {
-  fill: var(--sg-ink-3);
-  stroke: none;
-}
-.sg-figure [data-bend] {
-  transition: transform 300ms var(--sg-ease-out);
-}
-.sg-figure [data-bend='too_close'] {
-  transform-box: fill-box;
-}
-/* A part with a problem turns the colour of its finding */
-.sg-fig-part[data-state='active'] > [data-bend] > :is(rect, circle, line),
-.sg-fig-part[data-state='active'] > :is(rect) {
-  stroke: var(--sg-ok);
-}
-.sg-fig-part[data-state='sustained'] > [data-bend] > :is(rect, circle, line),
-.sg-fig-part[data-state='sustained'] > :is(rect) {
-  stroke: var(--sg-bad);
-}
-.sg-fig-part[data-part='too_close'][data-state='active'] .sg-fig-screen {
-  fill: var(--sg-ok);
-}
-.sg-fig-part[data-part='too_close'][data-state='sustained'] .sg-fig-screen {
-  fill: var(--sg-bad);
-}
-
 /* ── The stretch slip ─────────────────────────────────────────────────── */
 
 .sg-tip {
@@ -1399,7 +1323,7 @@ body.sg-host {
 .sg-session {
   grid-area: session;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
   gap: 24px;
   padding-block: 10px;
@@ -1418,7 +1342,7 @@ body.sg-host {
 .sg-spark-wrap {
   position: relative;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
   gap: 12px;
   min-width: 0;
@@ -1817,12 +1741,6 @@ body.sg-host {
     --sg-gap: 10px;
     --sg-edge: 12px;
   }
-  .sg-figure-slot {
-    display: none;
-  }
-  .sg-issues-body {
-    grid-template-columns: minmax(0, 1fr);
-  }
   .sg-panel {
     gap: 18px;
     padding: 16px 18px;
@@ -1958,7 +1876,6 @@ body.sg-host {
   .sg-digit-strip,
   .sg-hl,
   .sg-bar-fill,
-  .sg-figure [data-bend],
   .sg-settings,
   .sg-settings[data-open='true'],
   .sg-step-dots li,

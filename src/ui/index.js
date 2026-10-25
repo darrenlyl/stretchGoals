@@ -61,7 +61,6 @@ import {
   reducedMotion,
   springEasing,
 } from './motion.js';
-import { createBodyChart } from './figure.js';
 import { createSession } from './session.js';
 
 // ─── Settings you might want to tweak ───────────────────────────────────────
@@ -102,7 +101,6 @@ let suggested = null;
 const issueRows = {};
 let issueOrder = '';
 
-let figure = null; // the body chart beside the findings (./figure.js)
 let session = null; // this session's numbers and sparkline (./session.js)
 
 // ─── Small helpers ──────────────────────────────────────────────────────────
@@ -406,7 +404,6 @@ const TEMPLATE = `
             <span class="sg-count" data-ref="issueCount"></span>
           </div>
           <div class="sg-issues-body">
-            <div class="sg-figure-slot" data-ref="figureSlot"></div>
             <div class="sg-issues-main">
               <div class="sg-empty" data-ref="issuesEmpty">
                 <p data-ref="issuesEmptyText"></p>
@@ -997,7 +994,7 @@ function renderDashboard(state) {
     setText(refs.subVerdict, MODE_TEXT[mode][1]);
   }
 
-  renderIssues(mode, issues, state.metrics?.severity, state.metrics ?? {});
+  renderIssues(mode, issues, state.metrics?.severity);
   renderTip(worst);
   session.track(state, mode, live ? scoreTone(state.score) : 'none');
 }
@@ -1075,7 +1072,7 @@ function noteRecoveries(live, byId) {
  * go to the top, worst first, in colour. The others say "Fine" and show a grey bar
  * from metrics.severity, so you can watch a problem build before it's flagged.
  */
-function renderIssues(mode, issues, severities, metrics) {
+function renderIssues(mode, issues, severities) {
   const live = mode === 'live';
   setText(
     refs.issueCount,
@@ -1093,7 +1090,6 @@ function renderIssues(mode, issues, severities, metrics) {
     setText(refs.issuesEmptyText, MODE_TEXT[mode][2]);
     setText(refs.issuesAction, action);
     show(refs.issuesAction, action !== '');
-    figure.update({}, {}, {});
     return;
   }
 
@@ -1129,7 +1125,6 @@ function renderIssues(mode, issues, severities, metrics) {
           : 'Fine',
     );
   }
-  figure.update(severities ?? {}, metrics, states);
 
   // Order: current issues (worst first), then the rest. Only move rows when the order changes,
   // and slide them to their new places so a row never jumps without you seeing where it went.
@@ -1549,8 +1544,6 @@ function mount(el, givenServices = {}) {
     issueRows[id] = makeIssueRow(id);
     refs.issueList.appendChild(issueRows[id].li);
   }
-  figure = createBodyChart();
-  refs.figureSlot.appendChild(figure.el);
   session = createSession(refs, setText);
 
   // The score's digits and needle follow one gliding value
