@@ -54,7 +54,7 @@ New files: `motion.js` (spring curves, smooth movement, layout moves), `figure.j
 | dataviz | Score graph: one series, faint 50/80 guide lines, no legend, hover readout |
 | find-animation-opportunities | Problem list, empty states, score and camera chip now fade in instead of popping |
 | improve-animations | Shorter entrances; fixed the stretch card flickering when two problems swap places |
-| animation-performance | Only transform, opacity, clip-path and stroke animate |
+| animation-performance | Movement uses transform, opacity, clip-path and stroke only; colours and shadows ease. The one exception is the score's font width shifting on a tone change, which stays inside its card |
 | break-ui | Fixed: a score of 0 showing "000", the severity bar overlapping "Sustained", a long stretch name hiding Start, problem rows not lining up |
 
 ## 2. Things that weren't connected, now fixed
