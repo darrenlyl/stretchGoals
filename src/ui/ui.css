@@ -260,8 +260,8 @@ body.sg-host {
 }
 
 /* ── The grid: one layout per screen ──────────────────────────────────────
-   The camera and Ossie cards are never moved or re-created (the camera
-   stream and Ossie are attached to them). Each screen only changes which
+   The camera and Maizy cards are never moved or re-created (the camera
+   stream and Maizy are attached to them). Each screen only changes which
    cards are visible and where they sit, using grid-template-areas. */
 
 .sg-main {
@@ -275,13 +275,13 @@ body.sg-host {
   gap: var(--sg-gap);
 }
 
-/* Welcome: text on the left, Ossie on the right */
+/* Welcome: text on the left, Maizy on the right */
 .sg-app[data-screen="welcome"] .sg-grid {
   grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
   grid-template-rows: minmax(0, 1fr);
-  grid-template-areas: "welcome ossie";
+  grid-template-areas: "welcome maizy";
 }
-/* Calibration, dashboard, stretch: You | Ossie | ring on top, the screen's panel below */
+/* Calibration, dashboard, stretch: You | Maizy | ring on top, the screen's panel below */
 .sg-app:not([data-screen="welcome"]) .sg-grid {
   grid-template-columns: minmax(0, 5fr) minmax(0, 4fr) minmax(0, 3fr);
 }
@@ -289,15 +289,15 @@ body.sg-host {
 .sg-app[data-screen="dashboard"] .sg-grid {
   grid-template-rows: minmax(0, 1fr) minmax(0, 1.1fr);
   grid-template-areas:
-    "cam ossie side"
+    "cam maizy side"
     "issues issues tip";
 }
-/* Calibration and stretch: you and Ossie get more room, the panel is short */
+/* Calibration and stretch: you and Maizy get more room, the panel is short */
 .sg-app[data-screen="calibrate"] .sg-grid,
 .sg-app[data-screen="stretch"] .sg-grid {
   grid-template-rows: minmax(0, 1.5fr) minmax(0, 1fr);
   grid-template-areas:
-    "cam ossie side"
+    "cam maizy side"
     "panel panel panel";
 }
 
@@ -429,14 +429,14 @@ body.sg-host {
   font-weight: 500;
 }
 
-/* ── Ossie slot ───────────────────────────────────────────────────────── */
+/* ── Maizy slot ───────────────────────────────────────────────────────── */
 
-.sg-ossie-card {
-  grid-area: ossie;
+.sg-maizy-card {
+  grid-area: maizy;
   padding: 0;
   display: flex;
 }
-#ossie {
+#maizy {
   position: relative;
   flex: 1;
   min-width: 0;
@@ -950,19 +950,19 @@ body.sg-host {
     grid-template-rows: none;
   }
   .sg-app[data-screen="welcome"] .sg-grid {
-    grid-template-areas: "welcome" "ossie";
+    grid-template-areas: "welcome" "maizy";
   }
   .sg-app[data-screen="dashboard"] .sg-grid {
-    grid-template-areas: "side" "cam" "ossie" "issues" "tip";
+    grid-template-areas: "side" "cam" "maizy" "issues" "tip";
   }
   .sg-app[data-screen="calibrate"] .sg-grid,
   .sg-app[data-screen="stretch"] .sg-grid {
-    grid-template-areas: "side" "panel" "cam" "ossie";
+    grid-template-areas: "side" "panel" "cam" "maizy";
   }
   .sg-camera {
     aspect-ratio: 4 / 3;
   }
-  .sg-ossie-card,
+  .sg-maizy-card,
   .sg-side {
     height: 260px;
   }
