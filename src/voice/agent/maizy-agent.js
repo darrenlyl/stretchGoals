@@ -323,7 +323,9 @@ export function createMaizyAgent({ Conversation, getSignedUrl, controls = null, 
   function update(state, now = Date.now()) {
     latest = state;
     trackSitting(state, now);
-    if (status === "talking") postureUpdates(state, now);
+    // Posture updates only in calls the app started about posture. When they called her
+    // ("Hey Maizy", Talk), she sticks to what they asked; the voice coach nudges between calls.
+    if (status === "talking" && AUTO_REASONS.has(reason)) postureUpdates(state, now);
     if (status === "idle") maybeWake(state, now);
   }
 
