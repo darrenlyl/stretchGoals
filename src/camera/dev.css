@@ -1,0 +1,34 @@
+body {
+  font-family: system-ui, sans-serif;
+  margin: 24px;
+}
+
+/* the stage is the box the video and canvas share */
+#camera-stage {
+  position: relative; /* lets the canvas be positioned relative to this box */
+  width: 640px;
+  max-width: 100%;
+  /* mirror the whole stage, so the video AND the dots flip together */
+  transform: scaleX(-1);
+}
+
+#camera-video {
+  display: block; /* removes a small gap under the video */
+  width: 100%; /* fill the stage; the stage sets the size now */
+  background: #222;
+  border-radius: 8px;
+}
+
+/* stretch the canvas over the exact same area as the video */
+#camera-overlay {
+  position: absolute;
+  inset: 0; /* top, right, bottom and left all 0 = cover the stage */
+  width: 100%;
+  height: 100%;
+  pointer-events: none; /* clicks pass through to whatever is underneath */
+}
+
+#status,
+#nose {
+  color: #555;
+}
