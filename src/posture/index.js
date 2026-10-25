@@ -6,6 +6,14 @@ import { calibrate } from "./calibration.js";
 let baseline = null;
 let calib = null;
 let sensitivity = 0.5;
+let startedAt = {};    // issue id → when it switched ON
+let belowSince = {};   // issue id → when it dropped below 0.15 (the "turning off" countdown)
+
+// Forget every issue (after recalibrating, old issues were judged against the old baseline)
+function clearIssues() {
+  startedAt = {};
+  belowSince = {};
+}
 
 export function setSensitivity(value){
     sensitivity = value;
@@ -19,6 +27,7 @@ export function startCalibration(ms = 3000){
 
 export function resetCalibration(){
     baseline = null;
+    clearIssues();
     if (calib){
         calib.resolve({ ok: false, reason: "cancelled", message: "Calibration was cancelled."});
         calib = null;
@@ -34,7 +43,10 @@ export function analyze(frame) {
     if (elapsed >= calib.ms) {
       // 3 seconds are up: build the baseline (or find out why we can't)
       const result = calibrate(calib.frames);
-      if (result.ok) baseline = result.baseline;
+      if (result.ok) {
+        baseline = result.baseline;
+        clearIssues();
+      }
       calib.resolve(result); // tells whoever is waiting (the UI) the result
       calib = null;          // calibration is over
     } else {
@@ -73,16 +85,39 @@ export function analyze(frame) {
   const score = computeScore(severity);
   const issues = [];
 
-  for (const id in severity){
-    if (severity[id] > 0.3){
-        issues.push({
-            id: id, 
-            medical: ISSUES[id].medical,
-            layman: ISSUES[id].layman,
-            severity: severity[id],
-            durationSec: 0,
-            sustained: false,
-        });
+  for (const id in severity) {
+    const sev = severity[id];
+    const active = startedAt[id] !== undefined;   // is this issue currently ON?
+
+    // OFF → ON: crossed the 0.3 line
+    if (!active && sev > 0.3) {
+      startedAt[id] = frame.timestamp;
+    }
+
+    // ON → maybe OFF: only after 2 s below 0.15
+    if (active) {
+      if (sev < 0.15) {
+        if (belowSince[id] === undefined) belowSince[id] = frame.timestamp;   // start the countdown
+        if (frame.timestamp - belowSince[id] >= 2000) {                       // 2 s passed
+          delete startedAt[id];                                               // switch OFF
+          delete belowSince[id];
+        }
+      } else {
+        delete belowSince[id];   // climbed back above 0.15: cancel the countdown
+      }
+    }
+
+    // If it's ON, report it
+    if (startedAt[id] !== undefined) {
+      const durationSec = (frame.timestamp - startedAt[id]) / 1000;
+      issues.push({
+        id: id,
+        medical: ISSUES[id].medical,
+        layman: ISSUES[id].layman,
+        severity: sev,
+        durationSec: durationSec,
+        sustained: durationSec >= 5,
+      });
     }
   }
 
