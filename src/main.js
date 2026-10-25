@@ -31,6 +31,8 @@ if (process.platform === 'win32') {
 }
 
 let mainWindow;
+// True once the user really quits (tray Quit, Cmd+Q). Until then, closing only hides the window.
+let isQuitting = false;
 
 const createWindow = () => {
   mainWindow = new BrowserWindow({
@@ -38,6 +40,8 @@ const createWindow = () => {
     height: 600,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
+      // Keep timers running at full speed when the window is hidden, so posture checks continue.
+      backgroundThrottling: false,
     },
   });
 
@@ -50,6 +54,13 @@ const createWindow = () => {
   }
 
   mainWindow.webContents.openDevTools();
+
+  // Closing the window hides it; the app keeps running in the tray.
+  mainWindow.on('close', (event) => {
+    if (isQuitting) return;
+    event.preventDefault();
+    mainWindow.hide();
+  });
 };
 
 app.whenReady().then(async () => {
@@ -62,12 +73,13 @@ app.whenReady().then(async () => {
   createWindow();
   createTray();
 
-  // Mac: reopen the window when the dock icon is clicked.
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
-    }
-  });
+  // Mac: clicking the dock icon brings the hidden window back.
+  app.on('activate', showWindow);
+});
+
+// Any real quit (tray Quit, Cmd+Q, shutting down) lets the window close.
+app.on('before-quit', () => {
+  isQuitting = true;
 });
 
 // Quit when the window closes, except on Mac.
