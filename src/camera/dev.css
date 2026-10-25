@@ -32,3 +32,21 @@ body {
 #nose {
   color: #555;
 }
+
+#fps {
+  color: #555;
+}
+
+/* lay the test controls out in one row */
+#controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0;
+}
+
+/* the friendly camera error stands out in red */
+#camera-error {
+  color: #b00020;
+  font-weight: 600;
+}

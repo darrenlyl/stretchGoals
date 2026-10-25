@@ -4,8 +4,8 @@
 // Cooldowns match Joseph's voice coach, so nobody gets nagged.
 import { ISSUES } from './shared/contracts.js';
 
-const SAME_ISSUE_MS = 3 * 60_000; // wait 3 minutes before notifying about the same issue again
-const ANY_NOTIFY_MS = 60_000; // and at least 60 seconds between any two notifications
+const SAME_ISSUE_MS = 1 * 5_000; // wait 3 minutes before notifying about the same issue again
+const ANY_NOTIFY_MS = 3_000; // and at least 60 seconds between any two notifications
 
 // One short fix per issue, shown under the issue name
 const TIPS = {

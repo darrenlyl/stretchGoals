@@ -33,6 +33,9 @@ const DASH_PATTERN = [8, 6]; // 8px dash, 6px gap
 const NODE_RADIUS = 6;
 const NODE_COLOR = '#8bdc85';
 
+const CAMERA_SIZE = {width: 640, height: 480} // what we ask the camera for
+const CAMERA_STORAGE_KEY = 'stretchGoals.cameraId' // where the chosen camera is remembered
+
 let video; // the <video> element we were given
 let canvas; // the <canvas> element we draw the overlay on
 let pen; // the "pen" we draw on the canvas with
@@ -40,6 +43,7 @@ let stream; // the live camera stream, kept so we can turn it off
 let landmarker; // the pose detector, loaded once and reused
 let timer; // the setInterval id, kept so we can stop the loop
 let overlayVisible = true;
+let cameraId = loadCameraId() // the camera the user picked, or null for "default"
 const listeners = new Set(); // every callback passed to onPoseFrame()
 
 /**
@@ -57,9 +61,7 @@ export async function startCamera(videoE1, canvasE1){
     
     try{
         // Ask for the camera. The browser shows a permission prompt the first time.
-        stream = await navigator.mediaDevices.getUserMedia({
-            video: { width: 640, height: 480 },
-        });
+        stream = await openCamera()
 
         // Plug the live stream into the <video> tag and start it.
         video.srcObject = stream;
@@ -107,6 +109,127 @@ export function stopCamera(){
 export function onPoseFrame(cb){
     listeners.add(cb);
     return () => listeners.delete(cb)
+}
+
+/**
+ * Lists the cameras on users computer. Names are only filled in once the user has allowed
+ * camera access, so call this after startCamera()
+ * @returns {Promise <{ deviceId: string, label: string }[]}
+ */
+export async function listCameras() {
+    const devices = await navigator.mediaDevices.enumerateDevices() // cameras, mics and speakers
+    return devices
+        .filter((device) => device.kind === 'videoinput') //keep cameras only
+        .map((device, i) => ({
+            deviceId: device.deviceId,
+            label: device.label || `Camera ${i + 1}`
+        })); // returns array of json objects with deviceId and label attributes
+}
+
+/**
+ * Switches to another camera and remembers the choice for next time.
+ * If the camera is running it restarts on the new one; if not, the choice is used
+ * next startCamera().
+ * @param {string} deviceId one of the ids from listCameras()
+ */
+export async function switchCamera(deviceId){
+    cameraId = deviceId;
+    saveCameraId(deviceId);
+    if (!timer) return; // camera is off so nothing to restart
+
+    stopCamera();
+    await startCamera(video, canvas);
+}
+
+/**
+ * The id of the camera that's on right now, or null if the camera is off.
+ */
+export function currentCameraId(){
+    return stream?.getVideoTracks()[0]?.getSettings().deviceId ?? null;
+}
+
+/**
+ * Opens the camera to use: the one the user picked if it's still plugged in, otherwise
+ * the default, skipping the infared "Windows Hello" camera if there's another choice
+ */
+async function openCamera() {
+    // getUserMedia only exists on localhost, https, or inside Electron
+    if (!navigator.mediaDevices?.getUserMedia) {
+        const err = new Error('Camera access is not available on this page.');
+        err.name = 'NotSupportedError';
+        throw err;
+    }
+
+    if (cameraId) {
+        try {
+            return await navigator.mediaDevices.getUserMedia({
+                video: { ...CAMERA_SIZE, deviceId: {exact: cameraId}}
+            });
+        } catch (err) {
+            // the picked camera is gone (unplugged): fall back to the default below.
+            // any other error (permission denied, camera busy) is a real problem
+            if (err.name !== 'OverconstrainedError' && err.name !== 'NotFoundError') throw err;
+        }
+    }
+
+    const defaultStream = await navigator.mediaDevices.getUserMedia({ video: CAMERA_SIZE });
+    if (!isInfrared(defaultStream.getVideoTracks()[0].label)) return defaultStream;
+
+    // the default is the infrared camera (black-and-grey picture): try a normal one instead
+    const normalCamera = (await listCameras()).find((camera) => !isInfrared(camera.label));
+    if (!normalCamera) return defaultStream; // no other camera, so use what we have
+
+    defaultStream.getTracks().forEach((track) => track.stop());
+    return navigator.mediaDevices.getUserMedia({
+        video: { ...CAMERA_SIZE, deviceId: { exact: normalCamera.deviceId } },
+    });
+}
+
+/**
+ * Turns an error from startCamera() or switchCamera() into a plain-English message
+ * for the user, so the app explains what to do instead of crashing or showing jargon.
+ * @param {Error} err
+ * @returns {string}
+ */
+export function describeCameraError(err) {
+    switch (err?.name) {
+        case 'NotAllowedError': // the user (or the OS) said no to the camera
+        case 'SecurityError':
+            return 'Camera access is blocked. Allow it in your system settings (Windows: Settings → Privacy & security → Camera. Mac: System Settings → Privacy & Security → Camera), then restart the app.';
+        case 'NotReadableError': // the camera exists but something else has it
+        case 'AbortError':
+            return 'Another app (like Zoom or Teams) is using the camera. Close it, then try again.';
+        case 'NotFoundError': // no camera at all
+        case 'OverconstrainedError':
+            return 'No camera found. Plug one in, then try again.';
+        case 'NotSupportedError': // thrown by openCamera() when getUserMedia doesn't exist
+            return "This page can't use the camera. Open it in the app or from localhost, not as a file.";
+        default: // anything else, e.g. the pose model files failed to load
+            return `The camera couldn't start (${err?.name ?? 'unknown error'}). Try restarting the app.`;
+    }
+}
+
+// Windows lists the face-unlock camera with "IR" or "Infrared" in its name
+function isInfrared(label) {
+    return /\bIR\b|infrared/i.test(label);
+}
+
+// localStorage remembers the chosen camera between app restarts.
+// try/catch because storage can be unavailable (e.g. blocked or a private window).
+function loadCameraId() {
+    try {
+        return localStorage.getItem(CAMERA_STORAGE_KEY);
+    } catch {
+        return null;
+    }
+}
+
+function saveCameraId(deviceId) {
+    try {
+        localStorage.setItem(CAMERA_STORAGE_KEY, deviceId);
+    } catch {
+        // not saved: the picker still works until the app is closed
+    }
 }
 
 function clearOverlay(){
