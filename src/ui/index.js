@@ -235,16 +235,19 @@ const ICON = {
   gear: svg(`<circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7"/>`),
   sun: svg(`<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/>`),
   moon: svg(`<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/>`),
+  heart: svg(`<path d="M12 19.5s-7.5-4.6-7.5-10A4.2 4.2 0 0 1 12 6.9a4.2 4.2 0 0 1 7.5 2.6c0 5.4-7.5 10-7.5 10z"/>`),
   desktop: svg(`<rect x="3" y="4.5" width="18" height="12" rx="2"/><path d="M9 20.5h6M12 16.5v4"/>`),
   camera: svg(`<rect x="2.5" y="6.5" width="13" height="11" rx="2.5"/><path d="M15.5 10.5l6-3.5v10l-6-3.5"/>`),
   cameraOff: svg(`<path d="M3 3l18 18M8.5 6.5h4.5a2.5 2.5 0 0 1 2.5 2.5v2l6-3.5v10l-2.2-1.3M15.5 17.5h-10.5A2.5 2.5 0 0 1 2.5 15V9a2.5 2.5 0 0 1 1.9-2.4"/>`),
 };
 
-// Theme: "system" follows the computer's light/dark setting
+// Theme: "system" follows the computer's light/dark setting. The top-bar button switches to
+// dark from any other theme, and back to light from dark.
 const THEMES = [
   { id: "system", label: "System", icon: ICON.desktop },
   { id: "light", label: "Light", icon: ICON.sun },
   { id: "dark", label: "Dark", icon: ICON.moon },
+  { id: "maizy", label: "Maizy", icon: ICON.heart }, // warm colours from Maizy's art
 ];
 
 // Title and one-line purpose shown in the top bar for each screen (welcome has its own hero)

@@ -36,6 +36,9 @@
   --sg-danger: oklch(0.52 0.19 25);
   --sg-danger-soft: oklch(0.52 0.19 25 / 0.12);
   --sg-scrim: oklch(0.22 0.02 255 / 0.32);
+  /* Welcome screen: the sun behind Maizy and the floor she stands on */
+  --sg-sun: var(--sg-warn-soft);
+  --sg-floor: var(--sg-vital-soft);
 
   --sg-shadow-1: 0 1px 2px oklch(0.3 0.03 255 / 0.06), 0 2px 8px oklch(0.3 0.03 255 / 0.05);
   --sg-shadow-2: 0 2px 6px oklch(0.3 0.03 255 / 0.07), 0 12px 32px oklch(0.3 0.03 255 / 0.08);
@@ -97,6 +100,46 @@
   --sg-shadow-3: 0 8px 20px oklch(0 0 0 / 0.35), 0 28px 64px oklch(0 0 0 / 0.5);
 }
 
+/* ── Tokens: Maizy (colours from her art: pink sweater, lavender skirt, butter hair,
+   plum-brown outline) ──────────────────────────────────────────────── */
+
+.sg-app[data-theme="maizy"] {
+  color-scheme: light;
+  --sg-bg: #fbf2f4;
+  --sg-surface-1: #fffafb;
+  --sg-surface-2: #f7e9ed;
+  --sg-surface-3: #f0dde3;
+  --sg-line: #ecd6dc;
+  --sg-line-strong: #d8bac4;
+
+  --sg-fg: #3a2630;
+  --sg-fg-muted: #6b5560;
+  --sg-fg-subtle: #7d6670;
+
+  --sg-vital: #6b4a8c; /* plum: her outline, and the buttons */
+  --sg-vital-strong: #5a3c78;
+  --sg-on-vital: #ffffff;
+  --sg-vital-soft: rgb(107 74 140 / 0.12);
+  --sg-trust: #6a58a8;
+  --sg-trust-soft: rgb(183 163 220 / 0.28);
+  --sg-warn: #94600f;
+  --sg-warn-soft: rgb(245 217 142 / 0.45);
+  --sg-danger: #b0364a;
+  --sg-danger-soft: rgb(176 54 74 / 0.12);
+  --sg-scrim: rgb(58 38 48 / 0.3);
+
+  --sg-sun: #f5d98e;
+  --sg-floor: #f4c7d0;
+
+  --sg-shadow-1: 0 1px 2px rgb(90 50 70 / 0.06), 0 2px 8px rgb(90 50 70 / 0.05);
+  --sg-shadow-2: 0 2px 6px rgb(90 50 70 / 0.07), 0 12px 32px rgb(90 50 70 / 0.08);
+  --sg-shadow-3: 0 8px 20px rgb(90 50 70 / 0.1), 0 28px 64px rgb(90 50 70 / 0.14);
+
+  /* Rounded, like her drawing (built into Macs; elsewhere the system face) */
+  --sg-font: ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --sg-font-display: ui-rounded, "SF Pro Rounded", -apple-system, "Segoe UI Variable Display", system-ui, sans-serif;
+}
+
 /* The page behind the app (seen while resizing, and under the dev panel) */
 html[data-sg-theme="light"] {
   background: oklch(0.975 0.004 250);
@@ -105,6 +148,10 @@ html[data-sg-theme="light"] {
 html[data-sg-theme="dark"] {
   background: oklch(0.165 0.012 250);
   color-scheme: dark;
+}
+html[data-sg-theme="maizy"] {
+  background: #fbf2f4;
+  color-scheme: light;
 }
 
 /* ── Base ───────────────────────────────────────────────────────────── */
@@ -1574,10 +1621,10 @@ body.sg-host {
 .sg-switch:checked::after {
   transform: translateX(16px);
 }
-/* Segmented control (Appearance): System | Light | Dark */
+/* Segmented control (Appearance): System | Light | Dark | Maizy */
 .sg-segmented {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 4px;
   margin-top: 10px;
   padding: 4px;
