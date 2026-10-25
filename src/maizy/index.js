@@ -37,8 +37,6 @@ const SPARKLES = [
 ];
 const STAR = 'M0-1C.14-.14.14-.14 1 0 .14.14.14.14 0 1-.14.14-.14.14-1 0-.14-.14-.14-.14 0-1Z';
 
-const STRETCH_IDS = ['chin_tuck', 'upper_trap', 'levator', 'chest_opener', 'scap_squeeze', 'shoulder_rolls', 'seated_extension', 'eye_break'];
-
 // Makes one Maizy. The app uses the shared `maizy` at the bottom.
 export function createMaizy() {
   let host = null;
@@ -64,8 +62,6 @@ export function createMaizy() {
   let sparkOn = false;
   let spark = 0;
   let celebrateUntil = 0;
-  let stretch = null;
-  let stretchStart = 0;
   let hadSustainedIssue = false;
 
   function mount(el) {
@@ -156,17 +152,6 @@ export function createMaizy() {
     if (reduceMotion) snap();
   }
 
-  // The flipbook has no stretch frames, so a stretch shows her tall with a slow, deep breathing stretch.
-  function playStretch(stretchId) {
-    stretch = STRETCH_IDS.includes(stretchId) ? stretchId : stretchId ? 'generic' : null;
-    stretchStart = performance.now();
-    parts.root?.toggleAttribute('data-stretch', Boolean(stretch));
-  }
-
-  function stopStretch() {
-    playStretch(null);
-  }
-
   // Jumps to her happiest frame with sparkles for a couple of seconds.
   function celebrate() {
     celebrateUntil = performance.now() + CELEBRATE_MS;
@@ -200,7 +185,7 @@ export function createMaizy() {
   function snap() {
     Object.assign(current, target);
     const celebrating = performance.now() < celebrateUntil;
-    shown = goal = stretch || celebrating ? FRAMES - 1 : frameOf(current.p);
+    shown = goal = celebrating ? FRAMES - 1 : frameOf(current.p);
     showFrame(shown);
     tint(current.v);
     parts.body.style.transform = '';
@@ -221,8 +206,8 @@ export function createMaizy() {
     if (Math.abs(target.p - current.p) < 5e-4) current.p = target.p;
 
     const celebrating = now < celebrateUntil;
-    // While stretching or cheering she stands at her tallest
-    const p = stretch || celebrating ? 1 : current.p;
+    // While cheering she stands at her tallest
+    const p = celebrating ? 1 : current.p;
 
     // Bands of 10 points: rise as soon as the next band is reached, drop only once the score is
     // clearly below the current one, so a score hovering at 70 doesn't flicker.
@@ -244,11 +229,10 @@ export function createMaizy() {
     }
     kick *= Math.exp(-dt * 8);
 
-    // Breathing and a slow sway; livelier with more vitality. A stretch breathes slow and deep.
+    // Breathing and a slow sway; livelier with more vitality
     const t = now / 1000;
     const lively = 0.5 + 0.5 * clamp01(current.v);
-    let breath = Math.sin(t * ((2 * Math.PI) / BREATH_S)) * 0.012 * lively;
-    if (stretch) breath = (0.5 - 0.5 * Math.cos(((now - stretchStart) / 1000) * ((2 * Math.PI) / 4))) * 0.05;
+    const breath = Math.sin(t * ((2 * Math.PI) / BREATH_S)) * 0.012 * lively;
     const bounce = celebrating ? Math.abs(Math.sin(t * 9)) * 0.04 : 0;
     const sway = Math.sin(t * ((2 * Math.PI) / SWAY_S)) * 0.7 * lively;
     const sy = 1 + breath + kick * 0.025 + bounce;
@@ -273,7 +257,7 @@ export function createMaizy() {
     rafId = requestAnimationFrame(tick);
   }
 
-  return { mount, update, playStretch, stopStretch, celebrate, setVitality };
+  return { mount, update, celebrate, setVitality };
 }
 
 function clamp01(x) {

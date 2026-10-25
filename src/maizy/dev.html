@@ -7,13 +7,11 @@
       body { font: 14px system-ui, sans-serif; margin: 24px; display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;
         background: oklch(0.975 0.004 250); color: oklch(0.2 0.015 250); }
       .stage { display: flex; flex-direction: column; gap: 12px; align-items: center; }
-      /* Dark lightbox ground */
       #maizy { width: 260px; height: 325px; }
       #mini { width: 56px; height: 56px; border-radius: 28px; }
       .controls { display: flex; flex-direction: column; gap: 12px; max-width: 660px; }
       .buttons { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
       button { font: inherit; padding: 4px 10px; border-radius: 10px; border: 1px solid #aab; background: #fff; cursor: pointer; }
-      button.on { background: oklch(0.47 0.1 170); color: #fff; border-color: transparent; }
       small { color: #667; }
     </style>
   </head>
@@ -30,21 +28,14 @@
         <span id="vitality-value">auto</span>
         <label><input id="vitality-auto" type="checkbox" checked /> auto (grows while you sit tall)</label>
       </div>
-      <div>
-        <b>Stretches</b>
-        <div class="buttons" id="stretches"></div>
-      </div>
       <div class="buttons">
         <button id="celebrate">Celebrate</button>
-        <button id="stop">Stop stretch</button>
       </div>
     </div>
 
     <script type="module">
       import { maizy, createMaizy } from './index.js';
       import { mountFakePosturePanel } from '../debug/fake-posture.js';
-
-      const STRETCH_IDS = ['chin_tuck', 'upper_trap', 'levator', 'chest_opener', 'scap_squeeze', 'shoulder_rolls', 'seated_extension', 'eye_break'];
 
       // A second, small Maizy shows the mini (head and shoulders) version
       const mini = createMaizy();
@@ -67,20 +58,6 @@
       slider.oninput = applyVitality;
       auto.onchange = applyVitality;
 
-      const stretchButtons = document.querySelector('#stretches');
-      for (const id of STRETCH_IDS) {
-        const button = document.createElement('button');
-        button.textContent = id;
-        button.onclick = () => {
-          maizy.playStretch(id);
-          stretchButtons.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b === button));
-        };
-        stretchButtons.append(button);
-      }
-      document.querySelector('#stop').onclick = () => {
-        maizy.stopStretch();
-        stretchButtons.querySelectorAll('button').forEach((b) => b.classList.remove('on'));
-      };
       document.querySelector('#celebrate').onclick = () => maizy.celebrate();
     </script>
   </body>

@@ -222,7 +222,7 @@ These IDs connect everything:
 | `src/posture/index.js` | Darren | `analyze(frame) → PostureState`, `startCalibration(ms = 3000) → Promise<{ ok, reason? }>`, `resetCalibration()`, `setSensitivity(0–1)` |
 | `src/voice/index.js` | Joseph | `voiceCoach.update(state)`, `voiceCoach.setMuted(bool)`, `speakLine(lineId) → Promise` |
 | `src/stretches/index.js` | Joseph | `STRETCHES` (data array), `stretchesFor(issueId) → Stretch[]`, `startStretch(id)`, `stopStretch()`, `onStretchEvent(cb) → unsubscribe` |
-| `src/maizy/index.js` | Shawn | `maizy.mount(el)`, `maizy.update(state)`, `maizy.playStretch(stretchId)`, `maizy.stopStretch()`, `maizy.celebrate()`, `maizy.setVitality(0–1 \| null)` |
+| `src/maizy/index.js` | Shawn | `maizy.mount(el)`, `maizy.update(state)`, `maizy.celebrate()`, `maizy.setVitality(0–1 \| null)` |
 | `src/debug/fake-posture.js` | Shawn | `mountFakePosturePanel(el, onState)`: sliders and checkboxes that emit fake `PostureState`s |
 | `src/ui/index.js` | Claude | `ui.mount(el)`, `ui.update(state)` |
 
