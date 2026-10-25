@@ -19,25 +19,25 @@
  *   <video id="camera-video"> + <canvas id="camera-overlay">  Jordan: startCamera(video, canvas).
  *       Both are mirrored by ui.css (scaleX(-1)) and cropped the same way (object-fit: cover), so
  *       keep canvas.width/height = video.videoWidth/videoHeight and don't mirror them again.
- *   <div id="ossie">                                          Shawn: ossie.mount(el).
+ *   <div id="maizy">                                          Shawn: maizy.mount(el).
  *
  * ─── Wiring in src/app.js (Shawn) ───────────────────────────────────────────
  *   import * as camera from "./camera/index.js";
  *   import * as posture from "./posture/index.js";
  *   import * as voice from "./voice/index.js";
  *   import * as stretches from "./stretches/index.js";
- *   import { ossie } from "./ossie/index.js";
+ *   import { maizy } from "./maizy/index.js";
  *   import { ui } from "./ui/index.js";
  *
  *   ui.mount(document.querySelector("#app"), { camera, posture, voice, stretches });
- *   ossie.mount(document.querySelector("#ossie"));
+ *   maizy.mount(document.querySelector("#maizy"));
  *   // The UI's Start button calls camera.startCamera(video, canvas) for you.
  *   let paused = false;
  *   ui.onPauseChange((p) => { paused = p; });
  *   camera.onPoseFrame((frame) => {
  *     if (paused) return;
  *     const state = posture.analyze(frame);
- *     ui.update(state); ossie.update(state); voice.voiceCoach.update(state);
+ *     ui.update(state); maizy.update(state); voice.voiceCoach.update(state);
  *     window.api.setTrayScore(state.score);
  *   });
  *   window.api.onTrayCommand((cmd) => {
@@ -236,7 +236,7 @@ const TEMPLATE = `
 
       <!-- 1. Welcome / camera permission -->
       <section class="sg-card sg-welcome" aria-labelledby="sg-welcome-title">
-        <h1 id="sg-welcome-title" class="sg-title">Meet Ossie. He slouches when you do.</h1>
+        <h1 id="sg-welcome-title" class="sg-title">Meet Maizy. She slouches when you do.</h1>
         <p class="sg-lede">stretchGoals watches your posture through your camera, tells you what's off in plain words, and coaches you back with a quick stretch.</p>
         <div class="sg-welcome-body">
           <div>
@@ -270,8 +270,8 @@ const TEMPLATE = `
         <figcaption class="sg-chip" data-ref="cameraChip" hidden></figcaption>
       </figure>
 
-      <!-- Ossie slot (Shawn). Never re-created. -->
-      <div class="sg-card sg-ossie-card"><div id="ossie"></div></div>
+      <!-- Maizy slot (Shawn). Never re-created. -->
+      <div class="sg-card sg-maizy-card"><div id="maizy"></div></div>
 
       <!-- 2. Calibration -->
       <div class="sg-screen" data-for="calibrate">
@@ -778,7 +778,7 @@ function renderStretch() {
   const { stretch, stepIndex, secondsLeft, stepTotal } = stretchRun;
   const steps = Array.isArray(stretch.steps) ? stretch.steps : [];
   setText(refs.stretchName, stretchName(stretch));
-  setText(refs.stretchStep, stepText(steps[stepIndex]) || "Follow along with Ossie.");
+  setText(refs.stretchStep, stepText(steps[stepIndex]) || "Follow the steps with the voice.");
   const next = stepText(steps[stepIndex + 1]);
   setText(refs.stretchNext, steps.length ? (next ? `Up next: ${next}` : "Last step. Nearly done.") : "");
   setText(refs.stretchStepOf, steps.length ? `Step ${stepIndex + 1} of ${steps.length}` : "");
