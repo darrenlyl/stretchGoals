@@ -798,10 +798,17 @@ body.sg-host {
 }
 /* The app's name is the welcome's heading (the small logo in the top bar is hidden here) */
 .sg-welcome .sg-title {
-  font-size: clamp(40px, 12cqi, 84px);
-  line-height: 1;
-  letter-spacing: -0.04em;
+  max-width: none;
+  font-size: clamp(44px, 17cqi, 132px);
+  line-height: 0.98;
+  letter-spacing: -0.045em;
   white-space: nowrap;
+}
+/* "with Maizy" on its own line under the name */
+.sg-title-with {
+  display: block;
+  color: var(--sg-fg-muted);
+  font-weight: 500;
 }
 .sg-welcome .sg-actions {
   margin-top: 12px;
