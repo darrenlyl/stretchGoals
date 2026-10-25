@@ -21,3 +21,13 @@ export function computeSeverities(m, baseline){
         too_close: tooClose,
     };
 };
+
+export function computeScore(sev){
+    const penalty = 
+    0.6 * sev.forward_head + 
+    0.6 * sev.slouching + 
+    0.35 * sev.head_tilt + 
+    0.35 * sev.uneven_shoulders + 
+    0.3 * sev.too_close;
+    return Math.round( 100 * (1 - Math.min(1, penalty)));
+}
